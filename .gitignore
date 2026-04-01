@@ -1,5 +1,7 @@
 backend/cmd/server/server
 backend/cmd/server/server.exe
+backend/server.exe
+backend/*.exe
 frontend/dist/
 frontend/node_modules/
 .venv/
