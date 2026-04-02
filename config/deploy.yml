@@ -27,6 +27,8 @@ builder: # do not change
 env:
   clear:
     PORT: "80"
+    SMTP_HOST: "smtp.gmail.com"
+    SMTP_PORT: "587"
 
 logging:
   driver: json-file
