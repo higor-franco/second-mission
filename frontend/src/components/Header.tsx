@@ -32,12 +32,12 @@ export default function Header() {
           >
             Careers
           </a>
-          <Link
-            to="/employers"
+          <a
+            href="#employers"
             className="text-sm font-medium text-[var(--muted-foreground)] hover:text-[var(--navy)] transition-colors cursor-pointer no-underline hidden md:inline"
           >
             For Employers
-          </Link>
+          </a>
           {!loading && (
             veteran ? (
               <Link

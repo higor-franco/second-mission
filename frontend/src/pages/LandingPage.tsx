@@ -84,6 +84,45 @@ const stats = [
   { value: '$2,400', label: 'avg. WOTC tax credit per veteran hire' },
 ]
 
+const employerBenefits = [
+  {
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <rect x="3" y="7" width="22" height="14" rx="2" /><path d="M3 12h22" /><circle cx="9" cy="18" r="1.5" /><circle cx="14" cy="18" r="1.5" />
+      </svg>
+    ),
+    title: 'PRE-QUALIFIED PIPELINE',
+    description: 'Access veterans whose military skills have been AI-translated into civilian task equivalents.',
+  },
+  {
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <path d="M7 14L12 19L21 9" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" />
+      </svg>
+    ),
+    title: 'TASK-LEVEL MATCHING',
+    description: 'We map what veterans actually did — convoy logistics, equipment maintenance — to your open roles.',
+  },
+  {
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <circle cx="14" cy="14" r="11" /><path d="M14 8v12M10 12h8M10 16h6" strokeLinecap="round" />
+      </svg>
+    ),
+    title: 'WOTC TAX CREDITS',
+    description: '$2,400–$9,600 per veteran hire. We flag eligibility automatically and guide you through the paperwork.',
+  },
+  {
+    icon: (
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <circle cx="14" cy="14" r="11" /><path d="M14 8v6l4 4" strokeLinecap="round" />
+      </svg>
+    ),
+    title: 'REDUCE TIME-TO-HIRE',
+    description: 'Veterans come with clearances, drug tests, leadership training, and proven reliability.',
+  },
+]
+
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-[var(--cream)]">
@@ -97,12 +136,12 @@ export default function LandingPage() {
 
         <div className="relative max-w-6xl mx-auto px-6">
           <div className="flex flex-col lg:flex-row items-center lg:items-center gap-10 lg:gap-16">
-            {/* Logo — bold and visible, mix-blend-mode removes white background */}
+            {/* Logo — bold and visible */}
             <div className="animate-scale-in flex-shrink-0" style={{ animationDelay: '0.1s' }}>
               <img
                 src="/logo.png"
                 alt="Second Mission"
-                className="h-48 md:h-56 lg:h-64 w-auto "
+                className="h-48 md:h-56 lg:h-64 w-auto"
               />
             </div>
 
@@ -110,18 +149,19 @@ export default function LandingPage() {
             <div className="max-w-3xl">
               <div className="animate-fade-in-up" style={{ animationDelay: '0.15s' }}>
                 <span className="inline-block font-heading text-sm tracking-[0.3em] text-[var(--gold-dark)] bg-[var(--gold)]/10 px-4 py-2 rounded-sm border border-[var(--gold)]/20 mb-8">
-                  FREE FOR ALL VETERANS
+                  CONNECTING VETERANS TO CAREERS
                 </span>
               </div>
 
               <h1 className="animate-fade-in-up font-heading text-6xl md:text-8xl lg:text-[6.5rem] leading-[0.9] text-[var(--navy)] tracking-wide mb-8" style={{ animationDelay: '0.2s' }}>
-                YOUR MILITARY SKILLS.{' '}
+                MILITARY SKILLS.{' '}
                 <span className="text-[var(--gold)]">CIVILIAN CAREERS.</span>
               </h1>
 
               <p className="animate-fade-in-up text-lg md:text-xl text-[var(--muted-foreground)] leading-relaxed max-w-xl mb-10" style={{ animationDelay: '0.3s' }}>
-                You led convoys, maintained fleets, managed supply chains under pressure. Those skills are worth{' '}
-                <strong className="text-[var(--navy)]">$68K+ in the civilian market</strong>. We translate what you did into careers you didn't know existed.
+                A two-sided platform that translates military experience into high-demand
+                industrial roles — connecting <strong className="text-[var(--navy)]">proven veteran talent</strong> with
+                the <strong className="text-[var(--navy)]">employers who need them</strong>.
               </p>
 
               <div className="animate-fade-in-up flex flex-col sm:flex-row gap-4" style={{ animationDelay: '0.4s' }}>
@@ -132,14 +172,14 @@ export default function LandingPage() {
                   <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M5 10L9 14L15 6" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
-                  Translate Your MOS
+                  I'm a Veteran
                 </Link>
-                <a
-                  href="#how-it-works"
+                <Link
+                  to="/employer/register"
                   className="inline-flex items-center justify-center gap-2 border-2 border-[var(--navy)] text-[var(--navy)] font-semibold text-lg px-8 py-4 rounded-sm hover:bg-[var(--navy)] hover:text-white transition-all cursor-pointer no-underline"
                 >
-                  See How It Works
-                </a>
+                  I'm an Employer
+                </Link>
               </div>
             </div>
           </div>
@@ -160,14 +200,17 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* How It Works */}
+      {/* How It Works — Veterans */}
       <section id="how-it-works" className="py-24 bg-[var(--cream)]">
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-16">
-            <span className="font-heading text-sm tracking-[0.3em] text-[var(--gold-dark)]">THE PIPELINE</span>
+            <span className="font-heading text-sm tracking-[0.3em] text-[var(--gold-dark)]">FOR VETERANS</span>
             <h2 className="font-heading text-5xl md:text-6xl text-[var(--navy)] mt-4 tracking-wide">
               FOUR STEPS TO YOUR NEW CAREER
             </h2>
+            <p className="text-[var(--muted-foreground)] mt-3 max-w-lg mx-auto">
+              Free for all veterans. Translate your MOS, match with employers, get placed.
+            </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -187,6 +230,18 @@ export default function LandingPage() {
                 <p className="text-sm text-[var(--muted-foreground)] leading-relaxed">{step.description}</p>
               </div>
             ))}
+          </div>
+
+          <div className="text-center mt-12">
+            <Link
+              to="/translate"
+              className="inline-flex items-center gap-3 bg-[var(--navy)] text-white font-semibold px-8 py-4 rounded-sm hover:bg-[var(--navy-light)] transition-all hover:translate-y-[-2px] hover:shadow-lg cursor-pointer no-underline"
+            >
+              Translate Your MOS — It's Free
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M3 8h10M9 4l4 4-4 4" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </Link>
           </div>
         </div>
       </section>
@@ -246,28 +301,111 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Employer Section */}
+      <section id="employers" className="py-24 bg-[var(--cream)]">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="text-center mb-16">
+            <span className="font-heading text-sm tracking-[0.3em] text-[var(--gold-dark)]">FOR EMPLOYERS</span>
+            <h2 className="font-heading text-5xl md:text-6xl text-[var(--navy)] mt-4 tracking-wide">
+              FILL YOUR HARDEST ROLES WITH{' '}
+              <span className="text-[var(--gold)]">PROVEN TALENT</span>
+            </h2>
+            <p className="text-[var(--muted-foreground)] mt-4 max-w-2xl mx-auto">
+              Not a job board — a workforce solution. Access pre-qualified veterans whose operational
+              skills have been AI-translated into your industry language.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+            {employerBenefits.map((b, i) => (
+              <div
+                key={i}
+                className="animate-fade-in-up bg-white border border-[var(--sand-dark)] rounded-sm p-7 hover:border-[var(--gold)] hover:shadow-md transition-all group"
+                style={{ animationDelay: `${0.08 * i}s` }}
+              >
+                <div className="flex items-start gap-4">
+                  <div className="flex-shrink-0 w-12 h-12 bg-[var(--navy)] text-[var(--gold)] rounded-sm flex items-center justify-center group-hover:bg-[var(--gold)] group-hover:text-[var(--navy)] transition-colors">
+                    {b.icon}
+                  </div>
+                  <div>
+                    <h3 className="font-heading text-lg tracking-wider text-[var(--navy)] mb-1">{b.title}</h3>
+                    <p className="text-sm text-[var(--muted-foreground)] leading-relaxed">{b.description}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Pricing overview — compact */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto mb-12">
+            <div className="bg-white border-2 border-[var(--navy)] rounded-sm p-7">
+              <div className="font-heading text-xs tracking-[0.2em] text-[var(--gold-dark)] mb-1">PIPELINE ACCESS</div>
+              <h3 className="font-heading text-xl tracking-wider text-[var(--navy)] mb-2">SUBSCRIPTION</h3>
+              <p className="text-sm text-[var(--muted-foreground)] leading-relaxed">
+                Monthly access to pre-qualified veteran candidates. Browse profiles, match scores, availability.
+              </p>
+            </div>
+            <div className="bg-[var(--navy)] border-2 border-[var(--navy)] rounded-sm p-7 text-white">
+              <div className="font-heading text-xs tracking-[0.2em] text-[var(--gold)] mb-1">PLACEMENT</div>
+              <h3 className="font-heading text-xl tracking-wider text-white mb-2">PER-HIRE FEE</h3>
+              <p className="text-sm text-[var(--sand)] leading-relaxed">
+                Only pay when you hire. Offset by WOTC tax credits — most employers net positive.
+              </p>
+            </div>
+          </div>
+
+          <div className="text-center">
+            <Link
+              to="/employer/register"
+              className="inline-flex items-center gap-3 bg-[var(--navy)] text-white font-semibold px-8 py-4 rounded-sm hover:bg-[var(--navy-light)] transition-all hover:translate-y-[-2px] hover:shadow-lg cursor-pointer no-underline"
+            >
+              Start Hiring Veterans
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M3 8h10M9 4l4 4-4 4" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </Link>
+            <p className="text-sm text-[var(--muted-foreground)] mt-3">
+              Already have an account?{' '}
+              <Link to="/employer/login" className="font-semibold text-[var(--navy)] hover:text-[var(--gold-dark)] transition-colors no-underline cursor-pointer">
+                Sign in
+              </Link>
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* CTA Section */}
       <section className="py-24 bg-[var(--navy)] relative overflow-hidden">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-0 left-1/4 w-96 h-96 bg-[var(--gold)] rounded-full blur-[120px]" />
           <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-[var(--gold)] rounded-full blur-[100px]" />
         </div>
-        <div className="relative max-w-3xl mx-auto px-6 text-center">
+        <div className="relative max-w-4xl mx-auto px-6 text-center">
           <h2 className="font-heading text-5xl md:text-6xl text-white tracking-wide mb-6">
-            YOUR SKILLS ARE WORTH MORE THAN YOU THINK
+            TWO SIDES.{' '}
+            <span className="text-[var(--gold)]">ONE PIPELINE.</span>
           </h2>
-          <p className="text-lg text-[var(--sand-dark)] mb-10 leading-relaxed">
-            73% of veterans are underemployed in their first civilian year. Not because they lack skills — because nobody translated them. Until now.
+          <p className="text-lg text-[var(--sand-dark)] mb-10 leading-relaxed max-w-2xl mx-auto">
+            Veterans get careers they didn't know existed. Employers get pre-qualified talent
+            they couldn't find. Second Mission bridges the gap.
           </p>
-          <Link
-            to="/translate"
-            className="inline-flex items-center gap-3 bg-[var(--gold)] text-[var(--navy-dark)] font-semibold text-lg px-10 py-5 rounded-sm hover:bg-[var(--gold-light)] transition-all hover:translate-y-[-2px] hover:shadow-xl cursor-pointer no-underline"
-          >
-            Translate Your MOS Now — It's Free
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M5 10H15M11 6L15 10L11 14" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </Link>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link
+              to="/translate"
+              className="inline-flex items-center justify-center gap-3 bg-[var(--gold)] text-[var(--navy-dark)] font-semibold text-lg px-10 py-5 rounded-sm hover:bg-[var(--gold-light)] transition-all hover:translate-y-[-2px] hover:shadow-xl cursor-pointer no-underline"
+            >
+              Translate Your MOS — Free
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M5 10H15M11 6L15 10L11 14" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </Link>
+            <Link
+              to="/employer/register"
+              className="inline-flex items-center justify-center gap-2 border-2 border-white text-white font-semibold text-lg px-10 py-5 rounded-sm hover:bg-white hover:text-[var(--navy)] transition-all cursor-pointer no-underline"
+            >
+              Employer Sign Up
+            </Link>
+          </div>
         </div>
       </section>
 

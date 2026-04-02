@@ -9,7 +9,6 @@ import DashboardPage from '@/pages/DashboardPage'
 import ProfilePage from '@/pages/ProfilePage'
 import OpportunitiesPage from '@/pages/OpportunitiesPage'
 import ApplicationsPage from '@/pages/ApplicationsPage'
-import EmployerLandingPage from '@/pages/EmployerLandingPage'
 import EmployerLoginPage, { EmployerRegisterPage } from '@/pages/EmployerLoginPage'
 import EmployerDashboardPage from '@/pages/EmployerDashboardPage'
 import EmployerNewListingPage from '@/pages/EmployerNewListingPage'
@@ -31,7 +30,6 @@ function App() {
           <Route path="/applications" element={<ApplicationsPage />} />
 
           {/* Employer routes */}
-          <Route path="/employers" element={<EmployerLandingPage />} />
           <Route path="/employer/login" element={
             <EmployerAuthProvider><EmployerLoginPage /></EmployerAuthProvider>
           } />

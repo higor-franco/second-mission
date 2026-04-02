@@ -159,7 +159,7 @@ export default function EmployerDashboardPage() {
       {/* Header */}
       <header className="bg-[var(--navy)] text-white sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link to="/employers" className="flex items-center gap-3 no-underline cursor-pointer">
+          <Link to="/" className="flex items-center gap-3 no-underline cursor-pointer">
             <img src="/logo.png" alt="Second Mission" className="h-10 w-auto brightness-0 invert" />
             <span className="font-heading text-2xl tracking-wider text-white leading-none hidden sm:block">
               SECOND MISSION
