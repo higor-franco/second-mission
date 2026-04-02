@@ -78,7 +78,7 @@ func main() {
 	mux.HandleFunc("POST /auth/magic-link", authHandler.SendMagicLink)
 	mux.HandleFunc("GET /auth/verify", authHandler.VerifyToken)
 	mux.HandleFunc("POST /api/auth/logout", authHandler.Logout)
-	mux.HandleFunc("GET /api/auth/me", authHandler.Me)
+	mux.Handle("GET /api/auth/me", handler.RequireAuth(queries, authHandler.Me))
 
 	// Protected veteran routes
 	mux.Handle("PUT /api/veteran/profile", handler.RequireAuth(queries, veteranHandler.UpdateProfile))
