@@ -9,9 +9,9 @@
 | MOS Translation API endpoint | Done | GET /api/translate?mos=88M + GET /api/mos-codes |
 | Public landing page (hero, 4-step journey, salary benchmarks, role cards) | Done | Military-professional aesthetic, Bebas Neue + Source Sans 3 |
 | MOS Translation UI (search + results with match scores) | Done | Circular score indicators, transferable skills, salary ranges |
-| Veteran auth (magic link email) | Pending | Separate login flow from employers |
-| Veteran registration & profile | Pending | |
-| Veteran dashboard (matched opportunities, status tracking) | Pending | |
+| Veteran auth (magic link email) | Done | POST /auth/magic-link, GET /auth/verify, dev login endpoint, session cookies |
+| Veteran registration & profile | Done | Auto-created on first login, PUT /api/veteran/profile, profile editing page |
+| Veteran dashboard (matched opportunities, status tracking) | Done | Shows career matches based on MOS, profile completion banner, stats row |
 
 ## Phase 2 — Employer Experience
 

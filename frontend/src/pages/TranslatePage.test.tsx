@@ -4,6 +4,18 @@ import { MemoryRouter } from 'react-router-dom'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import TranslatePage from './TranslatePage'
 
+// Mock auth context used by Header
+vi.mock('@/lib/auth', () => ({
+  useAuth: () => ({
+    veteran: null,
+    loading: false,
+    login: vi.fn(),
+    logout: vi.fn(),
+    refresh: vi.fn(),
+  }),
+  AuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}))
+
 const mockMosCodes = [
   { code: '88M', title: 'Motor Transport Operator', branch: 'Army', description: 'Operates wheeled vehicles' },
   { code: '91B', title: 'Wheeled Vehicle Mechanic', branch: 'Army', description: 'Maintains vehicles' },

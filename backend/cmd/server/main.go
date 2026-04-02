@@ -59,6 +59,8 @@ func main() {
 	// Set up handlers
 	queries := sqlc.New(pool)
 	mosHandler := handler.NewMOSHandler(queries)
+	authHandler := handler.NewAuthHandler(queries, cfg)
+	veteranHandler := handler.NewVeteranHandler(queries)
 
 	mux := http.NewServeMux()
 
@@ -68,9 +70,25 @@ func main() {
 		w.Write([]byte("ok"))
 	})
 
-	// API routes
+	// Public API routes
 	mux.HandleFunc("GET /api/translate", mosHandler.Translate)
 	mux.HandleFunc("GET /api/mos-codes", mosHandler.ListMOSCodes)
+
+	// Auth routes
+	mux.HandleFunc("POST /auth/magic-link", authHandler.SendMagicLink)
+	mux.HandleFunc("GET /auth/verify", authHandler.VerifyToken)
+	mux.HandleFunc("POST /api/auth/logout", authHandler.Logout)
+	mux.HandleFunc("GET /api/auth/me", authHandler.Me)
+
+	// Protected veteran routes
+	mux.Handle("PUT /api/veteran/profile", handler.RequireAuth(queries, veteranHandler.UpdateProfile))
+	mux.Handle("GET /api/veteran/matches", handler.RequireAuth(queries, veteranHandler.Matches))
+
+	// Dev-only login endpoint (only registered when DEV_MODE=1)
+	if cfg.DevMode {
+		slog.Warn("DEV_MODE enabled — /api/dev/login endpoint is active")
+		mux.HandleFunc("POST /api/dev/login", authHandler.DevLogin)
+	}
 
 	// Serve frontend (production only — in dev, Vite handles this)
 	if !cfg.DevMode {
@@ -106,9 +124,13 @@ func main() {
 
 func corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
+		origin := r.Header.Get("Origin")
+		if origin != "" {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+		}
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusOK)
 			return

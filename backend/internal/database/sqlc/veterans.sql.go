@@ -11,6 +11,32 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const createVeteranByEmail = `-- name: CreateVeteranByEmail :one
+INSERT INTO veterans (email)
+VALUES ($1)
+ON CONFLICT (email) DO NOTHING
+RETURNING id, email, name, mos_code, rank, years_of_service, separation_date, location, preferred_sectors, created_at, updated_at
+`
+
+func (q *Queries) CreateVeteranByEmail(ctx context.Context, email string) (Veteran, error) {
+	row := q.db.QueryRow(ctx, createVeteranByEmail, email)
+	var i Veteran
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.Name,
+		&i.MosCode,
+		&i.Rank,
+		&i.YearsOfService,
+		&i.SeparationDate,
+		&i.Location,
+		&i.PreferredSectors,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getVeteranByEmail = `-- name: GetVeteranByEmail :one
 SELECT id, email, name, mos_code, rank, years_of_service, separation_date, location, preferred_sectors, created_at, updated_at
 FROM veterans
@@ -44,6 +70,59 @@ WHERE id = $1
 
 func (q *Queries) GetVeteranByID(ctx context.Context, id int32) (Veteran, error) {
 	row := q.db.QueryRow(ctx, getVeteranByID, id)
+	var i Veteran
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.Name,
+		&i.MosCode,
+		&i.Rank,
+		&i.YearsOfService,
+		&i.SeparationDate,
+		&i.Location,
+		&i.PreferredSectors,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateVeteranProfile = `-- name: UpdateVeteranProfile :one
+UPDATE veterans SET
+    name = $2,
+    mos_code = $3,
+    rank = $4,
+    years_of_service = $5,
+    separation_date = $6,
+    location = $7,
+    preferred_sectors = $8,
+    updated_at = NOW()
+WHERE id = $1
+RETURNING id, email, name, mos_code, rank, years_of_service, separation_date, location, preferred_sectors, created_at, updated_at
+`
+
+type UpdateVeteranProfileParams struct {
+	ID               int32       `json:"id"`
+	Name             string      `json:"name"`
+	MosCode          pgtype.Text `json:"mos_code"`
+	Rank             string      `json:"rank"`
+	YearsOfService   int32       `json:"years_of_service"`
+	SeparationDate   pgtype.Date `json:"separation_date"`
+	Location         string      `json:"location"`
+	PreferredSectors []string    `json:"preferred_sectors"`
+}
+
+func (q *Queries) UpdateVeteranProfile(ctx context.Context, arg UpdateVeteranProfileParams) (Veteran, error) {
+	row := q.db.QueryRow(ctx, updateVeteranProfile,
+		arg.ID,
+		arg.Name,
+		arg.MosCode,
+		arg.Rank,
+		arg.YearsOfService,
+		arg.SeparationDate,
+		arg.Location,
+		arg.PreferredSectors,
+	)
 	var i Veteran
 	err := row.Scan(
 		&i.ID,

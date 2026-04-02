@@ -30,6 +30,16 @@ type Employer struct {
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 }
 
+type MagicToken struct {
+	ID        int32              `json:"id"`
+	Email     string             `json:"email"`
+	Token     string             `json:"token"`
+	UserType  string             `json:"user_type"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	ExpiresAt pgtype.Timestamptz `json:"expires_at"`
+	Used      bool               `json:"used"`
+}
+
 type MosCivilianMapping struct {
 	ID                 int32    `json:"id"`
 	MosCode            string   `json:"mos_code"`
