@@ -41,7 +41,7 @@ export default function LoginPage() {
       <header className="bg-[var(--cream)]/90 backdrop-blur-md border-b border-[var(--sand-dark)]">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center">
           <Link to="/" className="flex items-center gap-3 no-underline group cursor-pointer">
-            <img src="/logo.png" alt="Second Mission" className="h-10 w-auto" />
+            <img src="/logo.png" alt="Second Mission" className="h-10 w-auto mix-blend-multiply" />
             <span className="font-heading text-2xl tracking-wider text-[var(--navy)] leading-none">
               SECOND MISSION
             </span>

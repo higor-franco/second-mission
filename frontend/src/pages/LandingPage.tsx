@@ -96,13 +96,13 @@ export default function LandingPage() {
         <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-[var(--navy)]/5 to-transparent" />
 
         <div className="relative max-w-6xl mx-auto px-6">
-          <div className="flex flex-col lg:flex-row items-center lg:items-start gap-10 lg:gap-16">
-            {/* Logo — bold and visible */}
+          <div className="flex flex-col lg:flex-row items-center lg:items-center gap-10 lg:gap-16">
+            {/* Logo — bold and visible, mix-blend-mode removes white background */}
             <div className="animate-scale-in flex-shrink-0" style={{ animationDelay: '0.1s' }}>
               <img
                 src="/logo.png"
                 alt="Second Mission"
-                className="h-48 md:h-56 lg:h-64 w-auto drop-shadow-lg"
+                className="h-48 md:h-56 lg:h-64 w-auto mix-blend-multiply"
               />
             </div>
 
