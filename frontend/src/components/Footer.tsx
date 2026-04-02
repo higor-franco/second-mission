@@ -4,8 +4,11 @@ export default function Footer() {
       <div className="max-w-6xl mx-auto px-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
           <div>
-            <span className="font-heading text-3xl tracking-wider text-white">SECOND MISSION</span>
-            <p className="mt-4 text-sm text-[var(--sand-dark)] leading-relaxed max-w-xs">
+            <div className="flex items-center gap-3 mb-4">
+              <img src="/logo.png" alt="Second Mission" className="h-12 w-auto brightness-0 invert" />
+              <span className="font-heading text-3xl tracking-wider text-white">SECOND MISSION</span>
+            </div>
+            <p className="text-sm text-[var(--sand-dark)] leading-relaxed max-w-xs">
               Connecting America's veterans to high-demand industrial careers. Free for veterans, always.
             </p>
           </div>

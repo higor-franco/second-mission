@@ -97,8 +97,9 @@ export default function LandingPage() {
 
         <div className="relative max-w-6xl mx-auto px-6">
           <div className="max-w-3xl">
-            <div className="animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
-              <span className="inline-block font-heading text-sm tracking-[0.3em] text-[var(--gold-dark)] bg-[var(--gold)]/10 px-4 py-2 rounded-sm border border-[var(--gold)]/20 mb-8">
+            <div className="animate-fade-in-up flex items-center gap-4 mb-8" style={{ animationDelay: '0.1s' }}>
+              <img src="/logo.png" alt="Second Mission" className="h-16 w-auto" />
+              <span className="inline-block font-heading text-sm tracking-[0.3em] text-[var(--gold-dark)] bg-[var(--gold)]/10 px-4 py-2 rounded-sm border border-[var(--gold)]/20">
                 FREE FOR ALL VETERANS
               </span>
             </div>

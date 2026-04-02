@@ -53,11 +53,7 @@ export default function DashboardPage() {
       <header className="bg-[var(--navy)] text-white">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-3 no-underline group cursor-pointer">
-            <div className="w-10 h-10 bg-white/10 rounded-sm flex items-center justify-center group-hover:bg-white/20 transition-colors">
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                <path d="M5 10L9 14L15 6" stroke="var(--gold)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </div>
+            <img src="/logo.png" alt="Second Mission" className="h-10 w-auto brightness-0 invert" />
             <span className="font-heading text-2xl tracking-wider text-white leading-none">
               SECOND MISSION
             </span>
