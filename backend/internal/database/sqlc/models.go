@@ -19,32 +19,37 @@ type CivilianRole struct {
 }
 
 type Employer struct {
-	ID          int32              `json:"id"`
-	Email       string             `json:"email"`
-	CompanyName string             `json:"company_name"`
-	ContactName string             `json:"contact_name"`
-	Sector      string             `json:"sector"`
-	Location    string             `json:"location"`
-	Description string             `json:"description"`
-	CreatedAt   pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+	ID           int32              `json:"id"`
+	Email        string             `json:"email"`
+	CompanyName  string             `json:"company_name"`
+	ContactName  string             `json:"contact_name"`
+	Sector       string             `json:"sector"`
+	Location     string             `json:"location"`
+	Description  string             `json:"description"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+	PasswordHash string             `json:"password_hash"`
+	IsActive     bool               `json:"is_active"`
 }
 
 type JobListing struct {
-	ID             int32              `json:"id"`
-	EmployerID     pgtype.Int4        `json:"employer_id"`
-	CivilianRoleID int32              `json:"civilian_role_id"`
-	Title          string             `json:"title"`
-	Description    string             `json:"description"`
-	Requirements   []string           `json:"requirements"`
-	Location       string             `json:"location"`
-	SalaryMin      int32              `json:"salary_min"`
-	SalaryMax      int32              `json:"salary_max"`
-	EmploymentType string             `json:"employment_type"`
-	IsActive       bool               `json:"is_active"`
-	WotcEligible   bool               `json:"wotc_eligible"`
-	PostedAt       pgtype.Timestamptz `json:"posted_at"`
-	ExpiresAt      pgtype.Timestamptz `json:"expires_at"`
+	ID                int32              `json:"id"`
+	EmployerID        pgtype.Int4        `json:"employer_id"`
+	CivilianRoleID    int32              `json:"civilian_role_id"`
+	Title             string             `json:"title"`
+	Description       string             `json:"description"`
+	Requirements      []string           `json:"requirements"`
+	Location          string             `json:"location"`
+	SalaryMin         int32              `json:"salary_min"`
+	SalaryMax         int32              `json:"salary_max"`
+	EmploymentType    string             `json:"employment_type"`
+	IsActive          bool               `json:"is_active"`
+	WotcEligible      bool               `json:"wotc_eligible"`
+	PostedAt          pgtype.Timestamptz `json:"posted_at"`
+	ExpiresAt         pgtype.Timestamptz `json:"expires_at"`
+	Tasks             []string           `json:"tasks"`
+	Benefits          []string           `json:"benefits"`
+	MosCodesPreferred []string           `json:"mos_codes_preferred"`
 }
 
 type MagicToken struct {
