@@ -102,7 +102,7 @@ export default function LandingPage() {
               <img
                 src="/logo.png"
                 alt="Second Mission"
-                className="h-48 md:h-56 lg:h-64 w-auto mix-blend-multiply"
+                className="h-48 md:h-56 lg:h-64 w-auto "
               />
             </div>
 
