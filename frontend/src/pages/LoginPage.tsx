@@ -7,6 +7,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [submitted, setSubmitted] = useState(false)
   const [message, setMessage] = useState('')
+  const [devLink, setDevLink] = useState<string | null>(null)
   const [sending, setSending] = useState(false)
   const [error, setError] = useState('')
 
@@ -25,6 +26,9 @@ export default function LoginPage() {
       if (result.ok) {
         setSubmitted(true)
         setMessage(result.message)
+        if (result.dev_link) {
+          setDevLink(result.dev_link)
+        }
       } else {
         setError(result.message)
       }
@@ -125,17 +129,27 @@ export default function LoginPage() {
               </div>
 
               <h1 className="font-heading text-4xl md:text-5xl text-[var(--navy)] tracking-wide mb-4">
-                CHECK YOUR EMAIL
+                {devLink ? 'DEV MODE' : 'CHECK YOUR EMAIL'}
               </h1>
               <p className="text-[var(--muted-foreground)] mb-3 leading-relaxed max-w-sm mx-auto">
                 {message}
               </p>
-              <p className="text-sm text-[var(--muted-foreground)]">
-                The link expires in <strong className="text-[var(--navy)]">15 minutes</strong>.
-              </p>
+
+              {devLink ? (
+                <a
+                  href={devLink}
+                  className="inline-block mt-4 bg-[var(--navy)] text-white font-semibold text-lg px-8 py-4 rounded-sm hover:bg-[var(--navy-light)] transition-all hover:translate-y-[-1px] hover:shadow-lg no-underline cursor-pointer"
+                >
+                  Click here to sign in
+                </a>
+              ) : (
+                <p className="text-sm text-[var(--muted-foreground)]">
+                  The link expires in <strong className="text-[var(--navy)]">15 minutes</strong>.
+                </p>
+              )}
 
               <button
-                onClick={() => { setSubmitted(false); setEmail(''); }}
+                onClick={() => { setSubmitted(false); setEmail(''); setDevLink(null); }}
                 className="mt-10 text-sm font-semibold text-[var(--navy)] hover:text-[var(--gold-dark)] transition-colors cursor-pointer bg-transparent border-none"
               >
                 ← Use a different email

@@ -18,7 +18,7 @@ export interface VeteranProfile {
 interface AuthContextType {
   veteran: VeteranProfile | null
   loading: boolean
-  login: (email: string) => Promise<{ ok: boolean; message: string }>
+  login: (email: string) => Promise<{ ok: boolean; message: string; dev_link?: string | null }>
   logout: () => Promise<void>
   refresh: () => Promise<void>
   updateVeteran: (partial: Partial<VeteranProfile>) => void
@@ -58,7 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       credentials: 'include',
     })
     const data = await res.json()
-    return { ok: res.ok, message: data.message || data.error }
+    return { ok: res.ok, message: data.message || data.error, dev_link: data.dev_link || null }
   }
 
   const updateVeteran = useCallback((partial: Partial<VeteranProfile>) => {

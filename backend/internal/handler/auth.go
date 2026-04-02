@@ -97,14 +97,19 @@ func (h *AuthHandler) SendMagicLink(w http.ResponseWriter, r *http.Request) {
 	// Build the magic link URL
 	magicLink := fmt.Sprintf("%s/auth/verify?token=%s", h.cfg.BaseURL, token)
 
-	// Send the email (in dev mode, just log it)
+	// Send the email (in dev mode, return the link directly)
 	if h.cfg.DevMode {
 		slog.Info("magic link generated (dev mode)", "email", email, "link", magicLink)
-	} else {
-		if err := h.sendEmail(email, magicLink); err != nil {
-			slog.Error("failed to send magic link email", "email", email, "err", err)
-			// Still return success — don't reveal if email sending failed
-		}
+		writeJSON(w, http.StatusOK, map[string]string{
+			"message":  "Dev mode: use the link below to sign in.",
+			"dev_link": magicLink,
+		})
+		return
+	}
+
+	if err := h.sendEmail(email, magicLink); err != nil {
+		slog.Error("failed to send magic link email", "email", email, "err", err)
+		// Still return success — don't reveal if email sending failed
 	}
 
 	writeJSON(w, http.StatusOK, authResponse{
@@ -200,8 +205,8 @@ func (h *AuthHandler) VerifyToken(w http.ResponseWriter, r *http.Request) {
 // Returns the current authenticated veteran's profile
 func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 	session, ok := GetSession(r)
-	if !ok {
-		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "not authenticated"})
+	if !ok || session.UserType != "veteran" {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "not authenticated as veteran"})
 		return
 	}
 
