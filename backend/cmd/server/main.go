@@ -139,10 +139,12 @@ func main() {
 		})
 	}
 
+	// Redirect www to apex domain
+	var h http.Handler = wwwRedirect(mux, cfg.BaseURL)
+
 	// Add CORS middleware for dev mode
-	var h http.Handler = mux
 	if cfg.DevMode {
-		h = corsMiddleware(mux)
+		h = corsMiddleware(h)
 	}
 
 	slog.Info("starting server", "port", cfg.Port)
@@ -150,6 +152,17 @@ func main() {
 		slog.Error("server failed", "err", err)
 		os.Exit(1)
 	}
+}
+
+func wwwRedirect(next http.Handler, baseURL string) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasPrefix(r.Host, "www.") {
+			target := baseURL + r.URL.RequestURI()
+			http.Redirect(w, r, target, http.StatusMovedPermanently)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 func corsMiddleware(next http.Handler) http.Handler {

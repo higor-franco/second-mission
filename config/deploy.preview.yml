@@ -6,7 +6,7 @@ servers:
 env:
   clear:
     APP_ENV: preview
-    BASE_URL: https://<%= ENV['INFRA_WEB_IP'] %>.nip.io
+    BASE_URL: https://second-mission.com
   secret:
     - DATABASE_URL
     - SESSION_SECRET
@@ -15,7 +15,9 @@ env:
     - SMTP_FROM
 
 proxy:
-  host: <%= ENV['INFRA_WEB_IP'] %>.nip.io
+  hosts:
+    - second-mission.com
+    - www.second-mission.com
   ssl: true
 
 accessories:
