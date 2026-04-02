@@ -21,17 +21,17 @@
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Employer landing page | Pending | |
-| Employer auth (separate login flow) | Pending | |
-| Employer registration & company profile | Pending | |
-| Employer dashboard (candidate browse, match scores, WOTC flags) | Pending | |
-| Role posting (task-level descriptions) | Pending | |
-| Introduction requests | Pending | |
+| Employer landing page | Done | /employers — value prop, 4-step benefits, metrics bar, pricing overview, industry sectors, CTAs |
+| Employer auth (separate login flow) | Done | POST /api/employer/register, POST /api/employer/login, password + bcrypt, session cookies, dev login endpoint |
+| Employer registration & company profile | Done | /employer/register — full registration form with sector, location, description; /employer/profile — editable company profile |
+| Employer dashboard (candidate browse, match scores, WOTC flags) | Done | /employer/dashboard — stats (active listings, total candidates, placements), listing management with toggle, candidate cards with match scores and status progression |
+| Role posting (task-level descriptions) | Done | /employer/listings/new — create listings with civilian role category, task-level descriptions, requirements, benefits, salary, MOS preferences, WOTC flag |
+| Introduction requests | Done | Employer can advance candidate status: interested → introduced → interviewing → placed via dashboard |
 
 ## Phase 3 — Platform Intelligence
 
 | Task | Status | Notes |
 |------|--------|-------|
 | Task-level matching algorithm | Pending | |
-| Pipeline tracking (Matched → Introduced → Interviewed → Hired) | Done (veteran side) | Admin/employer side pending |
+| Pipeline tracking (Matched → Introduced → Interviewed → Hired) | Done (veteran side) | Employer side now done — bidirectional status management |
 | Cohort analytics | Pending | |

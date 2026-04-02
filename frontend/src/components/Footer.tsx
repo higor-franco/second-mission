@@ -23,7 +23,9 @@ export default function Footer() {
           <div>
             <h4 className="font-heading text-lg tracking-wider text-[var(--gold)] mb-4">FOR EMPLOYERS</h4>
             <ul className="space-y-2 text-sm">
-              <li><span className="text-[var(--sand-dark)]">Employer portal coming soon</span></li>
+              <li><a href="/employers" className="text-[var(--sand-dark)] hover:text-white transition-colors no-underline cursor-pointer">Why Second Mission</a></li>
+              <li><a href="/employer/register" className="text-[var(--sand-dark)] hover:text-white transition-colors no-underline cursor-pointer">Create Employer Account</a></li>
+              <li><a href="/employer/login" className="text-[var(--sand-dark)] hover:text-white transition-colors no-underline cursor-pointer">Employer Sign In</a></li>
             </ul>
           </div>
         </div>

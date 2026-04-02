@@ -61,6 +61,7 @@ func main() {
 	mosHandler := handler.NewMOSHandler(queries)
 	authHandler := handler.NewAuthHandler(queries, cfg)
 	veteranHandler := handler.NewVeteranHandler(queries)
+	employerHandler := handler.NewEmployerHandler(queries, cfg)
 
 	mux := http.NewServeMux()
 
@@ -89,10 +90,29 @@ func main() {
 	mux.Handle("PUT /api/veteran/applications/{id}", handler.RequireAuth(queries, veteranHandler.UpdateApplicationStatus))
 	mux.Handle("GET /api/veteran/journey", handler.RequireAuth(queries, veteranHandler.Journey))
 
-	// Dev-only login endpoint (only registered when DEV_MODE=1)
+	// Employer public routes
+	mux.HandleFunc("POST /api/employer/register", employerHandler.Register)
+	mux.HandleFunc("POST /api/employer/login", employerHandler.Login)
+	mux.HandleFunc("GET /api/civilian-roles", employerHandler.ListCivilianRoles)
+
+	// Protected employer routes
+	mux.Handle("GET /api/employer/me", handler.RequireAuth(queries, employerHandler.Me))
+	mux.Handle("PUT /api/employer/profile", handler.RequireAuth(queries, employerHandler.UpdateProfile))
+	mux.Handle("GET /api/employer/dashboard", handler.RequireAuth(queries, employerHandler.Dashboard))
+	mux.Handle("GET /api/employer/listings", handler.RequireAuth(queries, employerHandler.ListJobListings))
+	mux.Handle("GET /api/employer/listings/{id}", handler.RequireAuth(queries, employerHandler.GetJobListing))
+	mux.Handle("POST /api/employer/listings", handler.RequireAuth(queries, employerHandler.CreateJobListing))
+	mux.Handle("PUT /api/employer/listings/{id}", handler.RequireAuth(queries, employerHandler.UpdateJobListing))
+	mux.Handle("POST /api/employer/listings/{id}/toggle", handler.RequireAuth(queries, employerHandler.ToggleJobListing))
+	mux.Handle("DELETE /api/employer/listings/{id}", handler.RequireAuth(queries, employerHandler.DeleteJobListing))
+	mux.Handle("GET /api/employer/candidates", handler.RequireAuth(queries, employerHandler.ListCandidates))
+	mux.Handle("PUT /api/employer/candidates/{id}/status", handler.RequireAuth(queries, employerHandler.UpdateCandidateStatus))
+
+	// Dev-only login endpoints (only registered when DEV_MODE=1)
 	if cfg.DevMode {
-		slog.Warn("DEV_MODE enabled — /api/dev/login endpoint is active")
+		slog.Warn("DEV_MODE enabled — dev login endpoints are active")
 		mux.HandleFunc("POST /api/dev/login", authHandler.DevLogin)
+		mux.HandleFunc("POST /api/dev/employer-login", employerHandler.DevLogin)
 	}
 
 	// Serve frontend (production only — in dev, Vite handles this)
