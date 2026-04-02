@@ -96,40 +96,51 @@ export default function LandingPage() {
         <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-[var(--navy)]/5 to-transparent" />
 
         <div className="relative max-w-6xl mx-auto px-6">
-          <div className="max-w-3xl">
-            <div className="animate-fade-in-up flex items-center gap-4 mb-8" style={{ animationDelay: '0.1s' }}>
-              <img src="/logo.png" alt="Second Mission" className="h-16 w-auto" />
-              <span className="inline-block font-heading text-sm tracking-[0.3em] text-[var(--gold-dark)] bg-[var(--gold)]/10 px-4 py-2 rounded-sm border border-[var(--gold)]/20">
-                FREE FOR ALL VETERANS
-              </span>
+          <div className="flex flex-col lg:flex-row items-center lg:items-start gap-10 lg:gap-16">
+            {/* Logo — bold and visible */}
+            <div className="animate-scale-in flex-shrink-0" style={{ animationDelay: '0.1s' }}>
+              <img
+                src="/logo.png"
+                alt="Second Mission"
+                className="h-48 md:h-56 lg:h-64 w-auto drop-shadow-lg"
+              />
             </div>
 
-            <h1 className="animate-fade-in-up font-heading text-6xl md:text-8xl lg:text-[6.5rem] leading-[0.9] text-[var(--navy)] tracking-wide mb-8" style={{ animationDelay: '0.2s' }}>
-              YOUR MILITARY SKILLS.{' '}
-              <span className="text-[var(--gold)]">CIVILIAN CAREERS.</span>
-            </h1>
+            {/* Text content */}
+            <div className="max-w-3xl">
+              <div className="animate-fade-in-up" style={{ animationDelay: '0.15s' }}>
+                <span className="inline-block font-heading text-sm tracking-[0.3em] text-[var(--gold-dark)] bg-[var(--gold)]/10 px-4 py-2 rounded-sm border border-[var(--gold)]/20 mb-8">
+                  FREE FOR ALL VETERANS
+                </span>
+              </div>
 
-            <p className="animate-fade-in-up text-lg md:text-xl text-[var(--muted-foreground)] leading-relaxed max-w-xl mb-10" style={{ animationDelay: '0.3s' }}>
-              You led convoys, maintained fleets, managed supply chains under pressure. Those skills are worth{' '}
-              <strong className="text-[var(--navy)]">$68K+ in the civilian market</strong>. We translate what you did into careers you didn't know existed.
-            </p>
+              <h1 className="animate-fade-in-up font-heading text-6xl md:text-8xl lg:text-[6.5rem] leading-[0.9] text-[var(--navy)] tracking-wide mb-8" style={{ animationDelay: '0.2s' }}>
+                YOUR MILITARY SKILLS.{' '}
+                <span className="text-[var(--gold)]">CIVILIAN CAREERS.</span>
+              </h1>
 
-            <div className="animate-fade-in-up flex flex-col sm:flex-row gap-4" style={{ animationDelay: '0.4s' }}>
-              <Link
-                to="/translate"
-                className="inline-flex items-center justify-center gap-3 bg-[var(--navy)] text-white font-semibold text-lg px-8 py-4 rounded-sm hover:bg-[var(--navy-light)] transition-all hover:translate-y-[-2px] hover:shadow-lg cursor-pointer no-underline"
-              >
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M5 10L9 14L15 6" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-                Translate Your MOS
-              </Link>
-              <a
-                href="#how-it-works"
-                className="inline-flex items-center justify-center gap-2 border-2 border-[var(--navy)] text-[var(--navy)] font-semibold text-lg px-8 py-4 rounded-sm hover:bg-[var(--navy)] hover:text-white transition-all cursor-pointer no-underline"
-              >
-                See How It Works
-              </a>
+              <p className="animate-fade-in-up text-lg md:text-xl text-[var(--muted-foreground)] leading-relaxed max-w-xl mb-10" style={{ animationDelay: '0.3s' }}>
+                You led convoys, maintained fleets, managed supply chains under pressure. Those skills are worth{' '}
+                <strong className="text-[var(--navy)]">$68K+ in the civilian market</strong>. We translate what you did into careers you didn't know existed.
+              </p>
+
+              <div className="animate-fade-in-up flex flex-col sm:flex-row gap-4" style={{ animationDelay: '0.4s' }}>
+                <Link
+                  to="/translate"
+                  className="inline-flex items-center justify-center gap-3 bg-[var(--navy)] text-white font-semibold text-lg px-8 py-4 rounded-sm hover:bg-[var(--navy-light)] transition-all hover:translate-y-[-2px] hover:shadow-lg cursor-pointer no-underline"
+                >
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M5 10L9 14L15 6" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                  Translate Your MOS
+                </Link>
+                <a
+                  href="#how-it-works"
+                  className="inline-flex items-center justify-center gap-2 border-2 border-[var(--navy)] text-[var(--navy)] font-semibold text-lg px-8 py-4 rounded-sm hover:bg-[var(--navy)] hover:text-white transition-all cursor-pointer no-underline"
+                >
+                  See How It Works
+                </a>
+              </div>
             </div>
           </div>
         </div>
