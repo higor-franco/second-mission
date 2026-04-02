@@ -12,6 +12,7 @@ export interface VeteranProfile {
   location: string
   preferred_sectors: string[]
   profile_complete: boolean
+  journey_step: string
 }
 
 interface AuthContextType {

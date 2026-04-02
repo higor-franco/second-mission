@@ -83,6 +83,11 @@ func main() {
 	// Protected veteran routes
 	mux.Handle("PUT /api/veteran/profile", handler.RequireAuth(queries, veteranHandler.UpdateProfile))
 	mux.Handle("GET /api/veteran/matches", handler.RequireAuth(queries, veteranHandler.Matches))
+	mux.Handle("GET /api/veteran/opportunities", handler.RequireAuth(queries, veteranHandler.Opportunities))
+	mux.Handle("GET /api/veteran/applications", handler.RequireAuth(queries, veteranHandler.Applications))
+	mux.Handle("POST /api/veteran/applications", handler.RequireAuth(queries, veteranHandler.ExpressInterest))
+	mux.Handle("PUT /api/veteran/applications/{id}", handler.RequireAuth(queries, veteranHandler.UpdateApplicationStatus))
+	mux.Handle("GET /api/veteran/journey", handler.RequireAuth(queries, veteranHandler.Journey))
 
 	// Dev-only login endpoint (only registered when DEV_MODE=1)
 	if cfg.DevMode {

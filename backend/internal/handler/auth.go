@@ -51,6 +51,7 @@ type meResponse struct {
 	Location         string   `json:"location"`
 	PreferredSectors []string `json:"preferred_sectors"`
 	ProfileComplete  bool     `json:"profile_complete"`
+	JourneyStep      string   `json:"journey_step"`
 }
 
 // POST /auth/magic-link
@@ -136,17 +137,25 @@ func (h *AuthHandler) VerifyToken(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Find or create the veteran
-	veteran, err := h.queries.GetVeteranByEmail(ctx, magicToken.Email)
+	vet, err := h.queries.GetVeteranByEmail(ctx, magicToken.Email)
 	if err != nil {
 		// New veteran — create one
-		veteran, err = h.queries.CreateVeteranByEmail(ctx, magicToken.Email)
-		if err != nil {
+		created, createErr := h.queries.CreateVeteranByEmail(ctx, magicToken.Email)
+		if createErr != nil {
 			// Race condition: another request created the veteran. Try fetching again.
-			veteran, err = h.queries.GetVeteranByEmail(ctx, magicToken.Email)
+			vet, err = h.queries.GetVeteranByEmail(ctx, magicToken.Email)
 			if err != nil {
 				slog.Error("failed to find or create veteran", "email", magicToken.Email, "err", err)
 				writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "internal server error"})
 				return
+			}
+		} else {
+			vet = sqlc.GetVeteranByEmailRow{
+				ID: created.ID, Email: created.Email, Name: created.Name,
+				MosCode: created.MosCode, Rank: created.Rank, YearsOfService: created.YearsOfService,
+				SeparationDate: created.SeparationDate, Location: created.Location,
+				PreferredSectors: created.PreferredSectors, JourneyStep: created.JourneyStep,
+				CreatedAt: created.CreatedAt, UpdatedAt: created.UpdatedAt,
 			}
 		}
 	}
@@ -163,7 +172,7 @@ func (h *AuthHandler) VerifyToken(w http.ResponseWriter, r *http.Request) {
 	_, err = h.queries.CreateSession(ctx, sqlc.CreateSessionParams{
 		ID:        sessionID,
 		UserType:  "veteran",
-		UserID:    veteran.ID,
+		UserID:    vet.ID,
 		ExpiresAt: sessExpiresAt,
 	})
 	if err != nil {
@@ -196,7 +205,7 @@ func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	veteran, err := h.queries.GetVeteranByID(r.Context(), session.UserID)
+	vet, err := h.queries.GetVeteranByID(r.Context(), session.UserID)
 	if err != nil {
 		slog.Error("failed to get veteran", "id", session.UserID, "err", err)
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "internal server error"})
@@ -204,28 +213,29 @@ func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 	}
 
 	mosCode := ""
-	if veteran.MosCode.Valid {
-		mosCode = veteran.MosCode.String
+	if vet.MosCode.Valid {
+		mosCode = vet.MosCode.String
 	}
 
 	sepDate := ""
-	if veteran.SeparationDate.Valid {
-		sepDate = veteran.SeparationDate.Time.Format("2006-01-02")
+	if vet.SeparationDate.Valid {
+		sepDate = vet.SeparationDate.Time.Format("2006-01-02")
 	}
 
-	profileComplete := veteran.Name != "" && mosCode != ""
+	profileComplete := vet.Name != "" && mosCode != ""
 
 	writeJSON(w, http.StatusOK, meResponse{
-		ID:               veteran.ID,
-		Email:            veteran.Email,
-		Name:             veteran.Name,
+		ID:               vet.ID,
+		Email:            vet.Email,
+		Name:             vet.Name,
 		MosCode:          mosCode,
-		Rank:             veteran.Rank,
-		YearsOfService:   veteran.YearsOfService,
+		Rank:             vet.Rank,
+		YearsOfService:   vet.YearsOfService,
 		SeparationDate:   sepDate,
-		Location:         veteran.Location,
-		PreferredSectors: veteran.PreferredSectors,
+		Location:         vet.Location,
+		PreferredSectors: vet.PreferredSectors,
 		ProfileComplete:  profileComplete,
+		JourneyStep:      vet.JourneyStep,
 	})
 }
 
@@ -264,15 +274,23 @@ func (h *AuthHandler) DevLogin(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	// Find or create veteran
-	veteran, err := h.queries.GetVeteranByEmail(ctx, email)
+	vet, err := h.queries.GetVeteranByEmail(ctx, email)
 	if err != nil {
-		veteran, err = h.queries.CreateVeteranByEmail(ctx, email)
-		if err != nil {
-			veteran, err = h.queries.GetVeteranByEmail(ctx, email)
+		created, createErr := h.queries.CreateVeteranByEmail(ctx, email)
+		if createErr != nil {
+			vet, err = h.queries.GetVeteranByEmail(ctx, email)
 			if err != nil {
 				slog.Error("dev login: failed to find or create veteran", "err", err)
 				writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "internal server error"})
 				return
+			}
+		} else {
+			vet = sqlc.GetVeteranByEmailRow{
+				ID: created.ID, Email: created.Email, Name: created.Name,
+				MosCode: created.MosCode, Rank: created.Rank, YearsOfService: created.YearsOfService,
+				SeparationDate: created.SeparationDate, Location: created.Location,
+				PreferredSectors: created.PreferredSectors, JourneyStep: created.JourneyStep,
+				CreatedAt: created.CreatedAt, UpdatedAt: created.UpdatedAt,
 			}
 		}
 	}
@@ -289,7 +307,7 @@ func (h *AuthHandler) DevLogin(w http.ResponseWriter, r *http.Request) {
 	_, err = h.queries.CreateSession(ctx, sqlc.CreateSessionParams{
 		ID:        sessionID,
 		UserType:  "veteran",
-		UserID:    veteran.ID,
+		UserID:    vet.ID,
 		ExpiresAt: sessExpiresAt,
 	})
 	if err != nil {
@@ -311,14 +329,15 @@ func (h *AuthHandler) DevLogin(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{
 		"message": "logged in",
 		"veteran": meResponse{
-			ID:               veteran.ID,
-			Email:            veteran.Email,
-			Name:             veteran.Name,
-			MosCode:          veteran.MosCode.String,
-			Rank:             veteran.Rank,
-			YearsOfService:   veteran.YearsOfService,
-			PreferredSectors: veteran.PreferredSectors,
-			ProfileComplete:  veteran.Name != "",
+			ID:               vet.ID,
+			Email:            vet.Email,
+			Name:             vet.Name,
+			MosCode:          vet.MosCode.String,
+			Rank:             vet.Rank,
+			YearsOfService:   vet.YearsOfService,
+			PreferredSectors: vet.PreferredSectors,
+			ProfileComplete:  vet.Name != "",
+			JourneyStep:      vet.JourneyStep,
 		},
 	})
 }

@@ -6,6 +6,8 @@ import LoginPage from '@/pages/LoginPage'
 import VerifyPage from '@/pages/VerifyPage'
 import DashboardPage from '@/pages/DashboardPage'
 import ProfilePage from '@/pages/ProfilePage'
+import OpportunitiesPage from '@/pages/OpportunitiesPage'
+import ApplicationsPage from '@/pages/ApplicationsPage'
 
 function App() {
   return (
@@ -18,6 +20,8 @@ function App() {
           <Route path="/auth/verify" element={<VerifyPage />} />
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/opportunities" element={<OpportunitiesPage />} />
+          <Route path="/applications" element={<ApplicationsPage />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>

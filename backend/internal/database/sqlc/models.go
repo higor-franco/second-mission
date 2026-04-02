@@ -30,6 +30,23 @@ type Employer struct {
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 }
 
+type JobListing struct {
+	ID             int32              `json:"id"`
+	EmployerID     pgtype.Int4        `json:"employer_id"`
+	CivilianRoleID int32              `json:"civilian_role_id"`
+	Title          string             `json:"title"`
+	Description    string             `json:"description"`
+	Requirements   []string           `json:"requirements"`
+	Location       string             `json:"location"`
+	SalaryMin      int32              `json:"salary_min"`
+	SalaryMax      int32              `json:"salary_max"`
+	EmploymentType string             `json:"employment_type"`
+	IsActive       bool               `json:"is_active"`
+	WotcEligible   bool               `json:"wotc_eligible"`
+	PostedAt       pgtype.Timestamptz `json:"posted_at"`
+	ExpiresAt      pgtype.Timestamptz `json:"expires_at"`
+}
+
 type MagicToken struct {
 	ID        int32              `json:"id"`
 	Email     string             `json:"email"`
@@ -75,4 +92,16 @@ type Veteran struct {
 	PreferredSectors []string           `json:"preferred_sectors"`
 	CreatedAt        pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+	JourneyStep      string             `json:"journey_step"`
+}
+
+type VeteranApplication struct {
+	ID           int32              `json:"id"`
+	VeteranID    int32              `json:"veteran_id"`
+	JobListingID int32              `json:"job_listing_id"`
+	Status       string             `json:"status"`
+	MatchScore   int32              `json:"match_score"`
+	Notes        string             `json:"notes"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 }

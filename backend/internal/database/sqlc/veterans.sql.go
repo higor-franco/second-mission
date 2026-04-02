@@ -15,12 +15,27 @@ const createVeteranByEmail = `-- name: CreateVeteranByEmail :one
 INSERT INTO veterans (email)
 VALUES ($1)
 ON CONFLICT (email) DO NOTHING
-RETURNING id, email, name, mos_code, rank, years_of_service, separation_date, location, preferred_sectors, created_at, updated_at
+RETURNING id, email, name, mos_code, rank, years_of_service, separation_date, location, preferred_sectors, journey_step, created_at, updated_at
 `
 
-func (q *Queries) CreateVeteranByEmail(ctx context.Context, email string) (Veteran, error) {
+type CreateVeteranByEmailRow struct {
+	ID               int32              `json:"id"`
+	Email            string             `json:"email"`
+	Name             string             `json:"name"`
+	MosCode          pgtype.Text        `json:"mos_code"`
+	Rank             string             `json:"rank"`
+	YearsOfService   int32              `json:"years_of_service"`
+	SeparationDate   pgtype.Date        `json:"separation_date"`
+	Location         string             `json:"location"`
+	PreferredSectors []string           `json:"preferred_sectors"`
+	JourneyStep      string             `json:"journey_step"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+}
+
+func (q *Queries) CreateVeteranByEmail(ctx context.Context, email string) (CreateVeteranByEmailRow, error) {
 	row := q.db.QueryRow(ctx, createVeteranByEmail, email)
-	var i Veteran
+	var i CreateVeteranByEmailRow
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
@@ -31,6 +46,7 @@ func (q *Queries) CreateVeteranByEmail(ctx context.Context, email string) (Veter
 		&i.SeparationDate,
 		&i.Location,
 		&i.PreferredSectors,
+		&i.JourneyStep,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -38,14 +54,29 @@ func (q *Queries) CreateVeteranByEmail(ctx context.Context, email string) (Veter
 }
 
 const getVeteranByEmail = `-- name: GetVeteranByEmail :one
-SELECT id, email, name, mos_code, rank, years_of_service, separation_date, location, preferred_sectors, created_at, updated_at
+SELECT id, email, name, mos_code, rank, years_of_service, separation_date, location, preferred_sectors, journey_step, created_at, updated_at
 FROM veterans
 WHERE email = $1
 `
 
-func (q *Queries) GetVeteranByEmail(ctx context.Context, email string) (Veteran, error) {
+type GetVeteranByEmailRow struct {
+	ID               int32              `json:"id"`
+	Email            string             `json:"email"`
+	Name             string             `json:"name"`
+	MosCode          pgtype.Text        `json:"mos_code"`
+	Rank             string             `json:"rank"`
+	YearsOfService   int32              `json:"years_of_service"`
+	SeparationDate   pgtype.Date        `json:"separation_date"`
+	Location         string             `json:"location"`
+	PreferredSectors []string           `json:"preferred_sectors"`
+	JourneyStep      string             `json:"journey_step"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+}
+
+func (q *Queries) GetVeteranByEmail(ctx context.Context, email string) (GetVeteranByEmailRow, error) {
 	row := q.db.QueryRow(ctx, getVeteranByEmail, email)
-	var i Veteran
+	var i GetVeteranByEmailRow
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
@@ -56,6 +87,7 @@ func (q *Queries) GetVeteranByEmail(ctx context.Context, email string) (Veteran,
 		&i.SeparationDate,
 		&i.Location,
 		&i.PreferredSectors,
+		&i.JourneyStep,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -63,14 +95,29 @@ func (q *Queries) GetVeteranByEmail(ctx context.Context, email string) (Veteran,
 }
 
 const getVeteranByID = `-- name: GetVeteranByID :one
-SELECT id, email, name, mos_code, rank, years_of_service, separation_date, location, preferred_sectors, created_at, updated_at
+SELECT id, email, name, mos_code, rank, years_of_service, separation_date, location, preferred_sectors, journey_step, created_at, updated_at
 FROM veterans
 WHERE id = $1
 `
 
-func (q *Queries) GetVeteranByID(ctx context.Context, id int32) (Veteran, error) {
+type GetVeteranByIDRow struct {
+	ID               int32              `json:"id"`
+	Email            string             `json:"email"`
+	Name             string             `json:"name"`
+	MosCode          pgtype.Text        `json:"mos_code"`
+	Rank             string             `json:"rank"`
+	YearsOfService   int32              `json:"years_of_service"`
+	SeparationDate   pgtype.Date        `json:"separation_date"`
+	Location         string             `json:"location"`
+	PreferredSectors []string           `json:"preferred_sectors"`
+	JourneyStep      string             `json:"journey_step"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+}
+
+func (q *Queries) GetVeteranByID(ctx context.Context, id int32) (GetVeteranByIDRow, error) {
 	row := q.db.QueryRow(ctx, getVeteranByID, id)
-	var i Veteran
+	var i GetVeteranByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
@@ -81,6 +128,55 @@ func (q *Queries) GetVeteranByID(ctx context.Context, id int32) (Veteran, error)
 		&i.SeparationDate,
 		&i.Location,
 		&i.PreferredSectors,
+		&i.JourneyStep,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateVeteranJourneyStep = `-- name: UpdateVeteranJourneyStep :one
+UPDATE veterans SET
+    journey_step = $2,
+    updated_at = NOW()
+WHERE id = $1
+RETURNING id, email, name, mos_code, rank, years_of_service, separation_date, location, preferred_sectors, journey_step, created_at, updated_at
+`
+
+type UpdateVeteranJourneyStepParams struct {
+	ID          int32  `json:"id"`
+	JourneyStep string `json:"journey_step"`
+}
+
+type UpdateVeteranJourneyStepRow struct {
+	ID               int32              `json:"id"`
+	Email            string             `json:"email"`
+	Name             string             `json:"name"`
+	MosCode          pgtype.Text        `json:"mos_code"`
+	Rank             string             `json:"rank"`
+	YearsOfService   int32              `json:"years_of_service"`
+	SeparationDate   pgtype.Date        `json:"separation_date"`
+	Location         string             `json:"location"`
+	PreferredSectors []string           `json:"preferred_sectors"`
+	JourneyStep      string             `json:"journey_step"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+}
+
+func (q *Queries) UpdateVeteranJourneyStep(ctx context.Context, arg UpdateVeteranJourneyStepParams) (UpdateVeteranJourneyStepRow, error) {
+	row := q.db.QueryRow(ctx, updateVeteranJourneyStep, arg.ID, arg.JourneyStep)
+	var i UpdateVeteranJourneyStepRow
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.Name,
+		&i.MosCode,
+		&i.Rank,
+		&i.YearsOfService,
+		&i.SeparationDate,
+		&i.Location,
+		&i.PreferredSectors,
+		&i.JourneyStep,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -98,7 +194,7 @@ UPDATE veterans SET
     preferred_sectors = $8,
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, email, name, mos_code, rank, years_of_service, separation_date, location, preferred_sectors, created_at, updated_at
+RETURNING id, email, name, mos_code, rank, years_of_service, separation_date, location, preferred_sectors, journey_step, created_at, updated_at
 `
 
 type UpdateVeteranProfileParams struct {
@@ -112,7 +208,22 @@ type UpdateVeteranProfileParams struct {
 	PreferredSectors []string    `json:"preferred_sectors"`
 }
 
-func (q *Queries) UpdateVeteranProfile(ctx context.Context, arg UpdateVeteranProfileParams) (Veteran, error) {
+type UpdateVeteranProfileRow struct {
+	ID               int32              `json:"id"`
+	Email            string             `json:"email"`
+	Name             string             `json:"name"`
+	MosCode          pgtype.Text        `json:"mos_code"`
+	Rank             string             `json:"rank"`
+	YearsOfService   int32              `json:"years_of_service"`
+	SeparationDate   pgtype.Date        `json:"separation_date"`
+	Location         string             `json:"location"`
+	PreferredSectors []string           `json:"preferred_sectors"`
+	JourneyStep      string             `json:"journey_step"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+}
+
+func (q *Queries) UpdateVeteranProfile(ctx context.Context, arg UpdateVeteranProfileParams) (UpdateVeteranProfileRow, error) {
 	row := q.db.QueryRow(ctx, updateVeteranProfile,
 		arg.ID,
 		arg.Name,
@@ -123,7 +234,7 @@ func (q *Queries) UpdateVeteranProfile(ctx context.Context, arg UpdateVeteranPro
 		arg.Location,
 		arg.PreferredSectors,
 	)
-	var i Veteran
+	var i UpdateVeteranProfileRow
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
@@ -134,6 +245,7 @@ func (q *Queries) UpdateVeteranProfile(ctx context.Context, arg UpdateVeteranPro
 		&i.SeparationDate,
 		&i.Location,
 		&i.PreferredSectors,
+		&i.JourneyStep,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -152,7 +264,7 @@ ON CONFLICT (email) DO UPDATE SET
     location = EXCLUDED.location,
     preferred_sectors = EXCLUDED.preferred_sectors,
     updated_at = NOW()
-RETURNING id, email, name, mos_code, rank, years_of_service, separation_date, location, preferred_sectors, created_at, updated_at
+RETURNING id, email, name, mos_code, rank, years_of_service, separation_date, location, preferred_sectors, journey_step, created_at, updated_at
 `
 
 type UpsertVeteranParams struct {
@@ -166,7 +278,22 @@ type UpsertVeteranParams struct {
 	PreferredSectors []string    `json:"preferred_sectors"`
 }
 
-func (q *Queries) UpsertVeteran(ctx context.Context, arg UpsertVeteranParams) (Veteran, error) {
+type UpsertVeteranRow struct {
+	ID               int32              `json:"id"`
+	Email            string             `json:"email"`
+	Name             string             `json:"name"`
+	MosCode          pgtype.Text        `json:"mos_code"`
+	Rank             string             `json:"rank"`
+	YearsOfService   int32              `json:"years_of_service"`
+	SeparationDate   pgtype.Date        `json:"separation_date"`
+	Location         string             `json:"location"`
+	PreferredSectors []string           `json:"preferred_sectors"`
+	JourneyStep      string             `json:"journey_step"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+}
+
+func (q *Queries) UpsertVeteran(ctx context.Context, arg UpsertVeteranParams) (UpsertVeteranRow, error) {
 	row := q.db.QueryRow(ctx, upsertVeteran,
 		arg.Email,
 		arg.Name,
@@ -177,7 +304,7 @@ func (q *Queries) UpsertVeteran(ctx context.Context, arg UpsertVeteranParams) (V
 		arg.Location,
 		arg.PreferredSectors,
 	)
-	var i Veteran
+	var i UpsertVeteranRow
 	err := row.Scan(
 		&i.ID,
 		&i.Email,
@@ -188,6 +315,7 @@ func (q *Queries) UpsertVeteran(ctx context.Context, arg UpsertVeteranParams) (V
 		&i.SeparationDate,
 		&i.Location,
 		&i.PreferredSectors,
+		&i.JourneyStep,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

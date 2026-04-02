@@ -11,7 +11,11 @@
 | MOS Translation UI (search + results with match scores) | Done | Circular score indicators, transferable skills, salary ranges |
 | Veteran auth (magic link email) | Done | POST /auth/magic-link, GET /auth/verify, dev login endpoint, session cookies |
 | Veteran registration & profile | Done | Auto-created on first login, PUT /api/veteran/profile, profile editing page |
-| Veteran dashboard (matched opportunities, status tracking) | Done | Shows career matches based on MOS, profile completion banner, stats row |
+| Veteran dashboard with journey tracker | Done | 4-step journey progress, stats row, links to opportunities and pipeline |
+| Employer job listings — database + seed data | Done | 25+ listings from 10 Texas employers (NOV, GE Vernova, KBR, Fluor, XTO, etc.) |
+| Veteran opportunities page (matched job listings) | Done | GET /api/veteran/opportunities, sector filters, WOTC badge, Express Interest |
+| Application / pipeline tracking | Done | POST /api/veteran/applications, GET /api/veteran/applications, status pipeline |
+| Journey step tracking | Done | Auto-advances through discover→translate→match→place based on activity |
 
 ## Phase 2 — Employer Experience
 
@@ -29,5 +33,5 @@
 | Task | Status | Notes |
 |------|--------|-------|
 | Task-level matching algorithm | Pending | |
-| Pipeline tracking (Matched → Introduced → Interviewed → Hired) | Pending | |
+| Pipeline tracking (Matched → Introduced → Interviewed → Hired) | Done (veteran side) | Admin/employer side pending |
 | Cohort analytics | Pending | |

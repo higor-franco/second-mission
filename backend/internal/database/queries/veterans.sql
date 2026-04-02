@@ -1,10 +1,10 @@
 -- name: GetVeteranByEmail :one
-SELECT id, email, name, mos_code, rank, years_of_service, separation_date, location, preferred_sectors, created_at, updated_at
+SELECT id, email, name, mos_code, rank, years_of_service, separation_date, location, preferred_sectors, journey_step, created_at, updated_at
 FROM veterans
 WHERE email = $1;
 
 -- name: GetVeteranByID :one
-SELECT id, email, name, mos_code, rank, years_of_service, separation_date, location, preferred_sectors, created_at, updated_at
+SELECT id, email, name, mos_code, rank, years_of_service, separation_date, location, preferred_sectors, journey_step, created_at, updated_at
 FROM veterans
 WHERE id = $1;
 
@@ -12,7 +12,7 @@ WHERE id = $1;
 INSERT INTO veterans (email)
 VALUES ($1)
 ON CONFLICT (email) DO NOTHING
-RETURNING id, email, name, mos_code, rank, years_of_service, separation_date, location, preferred_sectors, created_at, updated_at;
+RETURNING id, email, name, mos_code, rank, years_of_service, separation_date, location, preferred_sectors, journey_step, created_at, updated_at;
 
 -- name: UpdateVeteranProfile :one
 UPDATE veterans SET
@@ -25,7 +25,14 @@ UPDATE veterans SET
     preferred_sectors = $8,
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, email, name, mos_code, rank, years_of_service, separation_date, location, preferred_sectors, created_at, updated_at;
+RETURNING id, email, name, mos_code, rank, years_of_service, separation_date, location, preferred_sectors, journey_step, created_at, updated_at;
+
+-- name: UpdateVeteranJourneyStep :one
+UPDATE veterans SET
+    journey_step = $2,
+    updated_at = NOW()
+WHERE id = $1
+RETURNING id, email, name, mos_code, rank, years_of_service, separation_date, location, preferred_sectors, journey_step, created_at, updated_at;
 
 -- name: UpsertVeteran :one
 INSERT INTO veterans (email, name, mos_code, rank, years_of_service, separation_date, location, preferred_sectors)
@@ -39,4 +46,4 @@ ON CONFLICT (email) DO UPDATE SET
     location = EXCLUDED.location,
     preferred_sectors = EXCLUDED.preferred_sectors,
     updated_at = NOW()
-RETURNING id, email, name, mos_code, rank, years_of_service, separation_date, location, preferred_sectors, created_at, updated_at;
+RETURNING id, email, name, mos_code, rank, years_of_service, separation_date, location, preferred_sectors, journey_step, created_at, updated_at;
