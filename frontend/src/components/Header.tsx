@@ -44,15 +44,23 @@ export default function Header() {
                 to="/dashboard"
                 className="inline-flex items-center gap-2 bg-[var(--navy)] text-white text-sm font-semibold px-5 py-2.5 rounded-sm hover:bg-[var(--navy-light)] transition-all cursor-pointer no-underline"
               >
-                Dashboard
+                Veteran Dashboard
               </Link>
             ) : (
-              <Link
-                to="/login"
-                className="inline-flex items-center gap-2 bg-[var(--navy)] text-white text-sm font-semibold px-5 py-2.5 rounded-sm hover:bg-[var(--navy-light)] transition-all cursor-pointer no-underline"
-              >
-                Sign In
-              </Link>
+              <>
+                <Link
+                  to="/login"
+                  className="inline-flex items-center gap-2 bg-[var(--navy)] text-white text-sm font-semibold px-5 py-2.5 rounded-sm hover:bg-[var(--navy-light)] transition-all cursor-pointer no-underline"
+                >
+                  Veteran Sign In
+                </Link>
+                <Link
+                  to="/employer/login"
+                  className="inline-flex items-center gap-2 border-2 border-[var(--navy)] text-[var(--navy)] text-sm font-semibold px-5 py-2.5 rounded-sm hover:bg-[var(--navy)] hover:text-white transition-all cursor-pointer no-underline hidden md:inline-flex"
+                >
+                  Employer Sign In
+                </Link>
+              </>
             )
           )}
         </nav>
