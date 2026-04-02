@@ -21,6 +21,7 @@ interface AuthContextType {
   login: (email: string) => Promise<{ ok: boolean; message: string }>
   logout: () => Promise<void>
   refresh: () => Promise<void>
+  updateVeteran: (partial: Partial<VeteranProfile>) => void
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
@@ -60,6 +61,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { ok: res.ok, message: data.message || data.error }
   }
 
+  const updateVeteran = useCallback((partial: Partial<VeteranProfile>) => {
+    setVeteran(prev => prev ? { ...prev, ...partial } : prev)
+  }, [])
+
   const logout = async () => {
     await fetch('/api/auth/logout', {
       method: 'POST',
@@ -69,7 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ veteran, loading, login, logout, refresh }}>
+    <AuthContext.Provider value={{ veteran, loading, login, logout, refresh, updateVeteran }}>
       {children}
     </AuthContext.Provider>
   )

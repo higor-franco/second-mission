@@ -279,14 +279,18 @@ func (h *VeteranHandler) Opportunities(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Auto-advance journey to "match" if they have opportunities
+	journeyStep := vet.JourneyStep
 	if len(opps) > 0 && (vet.JourneyStep == "discover" || vet.JourneyStep == "translate") {
-		_, _ = h.queries.UpdateVeteranJourneyStep(r.Context(), sqlc.UpdateVeteranJourneyStepParams{
+		updated, stepErr := h.queries.UpdateVeteranJourneyStep(r.Context(), sqlc.UpdateVeteranJourneyStepParams{
 			ID:          session.UserID,
 			JourneyStep: "match",
 		})
+		if stepErr == nil {
+			journeyStep = updated.JourneyStep
+		}
 	}
 
-	writeJSON(w, http.StatusOK, map[string]any{"opportunities": opps})
+	writeJSON(w, http.StatusOK, map[string]any{"opportunities": opps, "journey_step": journeyStep})
 }
 
 // GET /api/veteran/applications
@@ -405,14 +409,21 @@ func (h *VeteranHandler) ExpressInterest(w http.ResponseWriter, r *http.Request)
 	}
 
 	// Advance journey to "place" when they express interest
+	journeyStep := vet.JourneyStep
 	if vet.JourneyStep != "place" {
-		_, _ = h.queries.UpdateVeteranJourneyStep(r.Context(), sqlc.UpdateVeteranJourneyStepParams{
+		updated, stepErr := h.queries.UpdateVeteranJourneyStep(r.Context(), sqlc.UpdateVeteranJourneyStepParams{
 			ID:          session.UserID,
 			JourneyStep: "place",
 		})
+		if stepErr == nil {
+			journeyStep = updated.JourneyStep
+		}
 	}
 
-	writeJSON(w, http.StatusOK, app)
+	writeJSON(w, http.StatusOK, map[string]any{
+		"application":  app,
+		"journey_step": journeyStep,
+	})
 }
 
 // PUT /api/veteran/applications/{id}

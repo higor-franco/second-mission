@@ -15,7 +15,7 @@
 | Employer job listings — database + seed data | Done | 25+ listings from 10 Texas employers (NOV, GE Vernova, KBR, Fluor, XTO, etc.) |
 | Veteran opportunities page (matched job listings) | Done | GET /api/veteran/opportunities, sector filters, WOTC badge, Express Interest |
 | Application / pipeline tracking | Done | POST /api/veteran/applications, GET /api/veteran/applications, status pipeline |
-| Journey step tracking | Done | Auto-advances through discover→translate→match→place based on activity |
+| Journey step tracking | Done | Auto-advances through discover→translate→match→place based on activity, real-time UI updates via auth context |
 
 ## Phase 2 — Employer Experience
 

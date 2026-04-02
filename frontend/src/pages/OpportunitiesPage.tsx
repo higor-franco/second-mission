@@ -54,7 +54,7 @@ function MatchScoreRing({ score }: { score: number }) {
 }
 
 export default function OpportunitiesPage() {
-  const { veteran, loading } = useAuth()
+  const { veteran, loading, updateVeteran } = useAuth()
   const [opportunities, setOpportunities] = useState<Opportunity[]>([])
   const [oppsLoading, setOppsLoading] = useState(true)
   const [activeFilter, setActiveFilter] = useState<string>('All')
@@ -68,6 +68,9 @@ export default function OpportunitiesPage() {
       .then(res => res.json())
       .then(data => {
         setOpportunities(data.opportunities || [])
+        if (data.journey_step) {
+          updateVeteran({ journey_step: data.journey_step })
+        }
       })
       .catch(() => {})
       .finally(() => setOppsLoading(false))
@@ -99,6 +102,10 @@ export default function OpportunitiesPage() {
       })
       if (res.ok) {
         setExpressed(prev => new Set([...prev, id]))
+        const data = await res.json()
+        if (data.journey_step) {
+          updateVeteran({ journey_step: data.journey_step })
+        }
       }
     } catch {
       // silent

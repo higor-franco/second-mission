@@ -91,7 +91,7 @@ export default function DashboardPage() {
 
   if (!veteran) return <Navigate to="/login" replace />
 
-  const currentStep = journeyData?.journey_step || veteran.journey_step || 'discover'
+  const currentStep = veteran.journey_step || journeyData?.journey_step || 'discover'
   const currentStepIndex = JOURNEY_STEPS.findIndex(s => s.id === currentStep)
   const activeApplications = journeyData
     ? (journeyData.status_counts.interested || 0) +

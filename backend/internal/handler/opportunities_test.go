@@ -3,9 +3,11 @@ package handler_test
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/higor-franco/second-mission/backend/internal/handler"
 )
@@ -51,6 +53,11 @@ func TestOpportunities_WithMOS(t *testing.T) {
 	// 88M has job listings seeded — expect at least one
 	if len(opps) == 0 {
 		t.Error("expected at least one matched opportunity for MOS 88M")
+	}
+
+	// Verify journey_step is included in response
+	if resp["journey_step"] == nil {
+		t.Error("expected journey_step in opportunities response")
 	}
 
 	// Verify structure of first opportunity
@@ -176,13 +183,20 @@ func TestExpressInterest_HappyPath(t *testing.T) {
 	if err := json.Unmarshal(interestW.Body.Bytes(), &appResp); err != nil {
 		t.Fatalf("failed to parse application response: %v", err)
 	}
-	if appResp["status"] != "interested" {
-		t.Errorf("expected status 'interested', got %v", appResp["status"])
+	app, ok := appResp["application"].(map[string]any)
+	if !ok {
+		t.Fatal("expected application object in response")
+	}
+	if app["status"] != "interested" {
+		t.Errorf("expected status 'interested', got %v", app["status"])
+	}
+	if appResp["journey_step"] == nil {
+		t.Error("expected journey_step in express interest response")
 	}
 }
 
 func TestJourney_UpdatesOnMOSSet(t *testing.T) {
-	cookie := devLoginAndGetCookie(t, "journey-test@example.com")
+	cookie := devLoginAndGetCookie(t, fmt.Sprintf("journey-test-%d@example.com", time.Now().UnixNano()))
 	vh := handler.NewVeteranHandler(testQueries)
 
 	mux := http.NewServeMux()
