@@ -92,7 +92,12 @@ func main() {
 
 	// Serve frontend (production only — in dev, Vite handles this)
 	if !cfg.DevMode {
-		frontendDist := filepath.Join("..", "frontend", "dist")
+		frontendDist := "frontend/dist"
+		// In Docker: WORKDIR /app, binary at /app/server, assets at /app/frontend/dist
+		// In local dev (running from backend/): ../frontend/dist
+		if _, err := os.Stat(frontendDist); os.IsNotExist(err) {
+			frontendDist = filepath.Join("..", "frontend", "dist")
+		}
 		fs := http.FileServer(http.Dir(frontendDist))
 		mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 			if strings.HasPrefix(r.URL.Path, "/api/") || strings.HasPrefix(r.URL.Path, "/auth/") {
