@@ -66,6 +66,7 @@ The core product is an AI-powered skills translation engine that maps military M
 
 **F6: Employer Registration & Dashboard**
 - Company sign-up with separate employer auth flow
+- Password recovery flow: forgot password → email with reset link → set new password
 - Post open roles with task-level descriptions (not just job titles)
 - Browse pre-matched veteran candidates with:
   - Match score

@@ -118,6 +118,10 @@ ORDER BY
     END,
     va.match_score DESC;
 
+-- name: UpdateEmployerPassword :exec
+UPDATE employers SET password_hash = $2, updated_at = NOW()
+WHERE id = $1;
+
 -- name: UpdateCandidateStatus :one
 UPDATE veteran_applications SET
     status = $3,

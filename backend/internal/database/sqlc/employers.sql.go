@@ -624,6 +624,21 @@ func (q *Queries) UpdateCandidateStatus(ctx context.Context, arg UpdateCandidate
 	return i, err
 }
 
+const updateEmployerPassword = `-- name: UpdateEmployerPassword :exec
+UPDATE employers SET password_hash = $2, updated_at = NOW()
+WHERE id = $1
+`
+
+type UpdateEmployerPasswordParams struct {
+	ID           int32  `json:"id"`
+	PasswordHash string `json:"password_hash"`
+}
+
+func (q *Queries) UpdateEmployerPassword(ctx context.Context, arg UpdateEmployerPasswordParams) error {
+	_, err := q.db.Exec(ctx, updateEmployerPassword, arg.ID, arg.PasswordHash)
+	return err
+}
+
 const updateEmployerProfile = `-- name: UpdateEmployerProfile :one
 UPDATE employers SET
     company_name = $2,

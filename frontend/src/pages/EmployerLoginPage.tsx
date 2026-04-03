@@ -128,6 +128,15 @@ export default function EmployerLoginPage() {
               />
             </div>
 
+            <div className="flex justify-end">
+              <Link
+                to="/employer/forgot-password"
+                className="text-xs font-semibold text-[var(--muted-foreground)] hover:text-[var(--navy)] transition-colors no-underline cursor-pointer"
+              >
+                Forgot password?
+              </Link>
+            </div>
+
             <button
               type="submit"
               disabled={submitting}

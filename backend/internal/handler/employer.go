@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"net/smtp"
 	"strconv"
 	"strings"
 	"time"
@@ -261,6 +262,182 @@ func (h *EmployerHandler) DevLogin(w http.ResponseWriter, r *http.Request) {
 		"message":  "logged in",
 		"employer": toEmployerMeResponse(employer.ID, employer.Email, employer.CompanyName, employer.ContactName, employer.Sector, employer.Location, employer.Description, employer.IsActive),
 	})
+}
+
+// --- Forgot / Reset Password ---
+
+type forgotPasswordRequest struct {
+	Email string `json:"email"`
+}
+
+// POST /api/employer/forgot-password
+func (h *EmployerHandler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
+	var req forgotPasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+		return
+	}
+
+	email := strings.ToLower(strings.TrimSpace(req.Email))
+	if email == "" || !strings.Contains(email, "@") {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "valid email is required"})
+		return
+	}
+
+	ctx := r.Context()
+
+	// Always return success to prevent email enumeration
+	successMsg := "If that email is registered, you'll receive a password reset link shortly. Check your inbox."
+
+	// Check if employer exists
+	_, err := h.queries.GetEmployerByEmail(ctx, email)
+	if err != nil {
+		// Employer not found — return success anyway (no enumeration)
+		writeJSON(w, http.StatusOK, map[string]string{"message": successMsg})
+		return
+	}
+
+	// Generate random token
+	tokenBytes := make([]byte, 32)
+	if _, err := rand.Read(tokenBytes); err != nil {
+		slog.Error("failed to generate reset token", "err", err)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "internal server error"})
+		return
+	}
+	token := hex.EncodeToString(tokenBytes)
+
+	// Store the token (reuse magic_tokens table with user_type = 'employer')
+	expiresAt := pgtype.Timestamptz{Time: time.Now().Add(tokenExpiry), Valid: true}
+	_, err = h.queries.CreateMagicToken(ctx, sqlc.CreateMagicTokenParams{
+		Email:     email,
+		Token:     token,
+		UserType:  "employer",
+		ExpiresAt: expiresAt,
+	})
+	if err != nil {
+		slog.Error("failed to create reset token", "err", err)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "internal server error"})
+		return
+	}
+
+	resetLink := fmt.Sprintf("%s/employer/reset-password?token=%s", h.cfg.BaseURL, token)
+
+	if h.cfg.DevMode {
+		slog.Info("password reset link generated (dev mode)", "email", email, "link", resetLink)
+		writeJSON(w, http.StatusOK, map[string]string{
+			"message":  "Dev mode: use the link below to reset your password.",
+			"dev_link": resetLink,
+		})
+		return
+	}
+
+	if err := h.sendResetEmail(email, resetLink); err != nil {
+		slog.Error("failed to send reset email", "email", email, "err", err)
+		// Still return success — don't reveal if email sending failed
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"message": successMsg})
+}
+
+type resetPasswordRequest struct {
+	Token    string `json:"token"`
+	Password string `json:"password"`
+}
+
+// POST /api/employer/reset-password
+func (h *EmployerHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
+	var req resetPasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid request body"})
+		return
+	}
+
+	token := strings.TrimSpace(req.Token)
+	if token == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "token is required"})
+		return
+	}
+	if req.Password == "" || len(req.Password) < 8 {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "password must be at least 8 characters"})
+		return
+	}
+
+	ctx := r.Context()
+
+	// Look up the token
+	magicToken, err := h.queries.GetMagicToken(ctx, token)
+	if err != nil {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "invalid or expired reset link"})
+		return
+	}
+
+	// Ensure it's an employer token
+	if magicToken.UserType != "employer" {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "invalid or expired reset link"})
+		return
+	}
+
+	// Mark token as used
+	if err := h.queries.MarkTokenUsed(ctx, magicToken.ID); err != nil {
+		slog.Error("failed to mark reset token used", "err", err)
+	}
+
+	// Find the employer
+	employer, err := h.queries.GetEmployerByEmail(ctx, magicToken.Email)
+	if err != nil {
+		slog.Error("employer not found for reset token", "email", magicToken.Email, "err", err)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "internal server error"})
+		return
+	}
+
+	// Hash new password
+	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		slog.Error("failed to hash new password", "err", err)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "internal server error"})
+		return
+	}
+
+	// Update the password
+	if err := h.queries.UpdateEmployerPassword(ctx, sqlc.UpdateEmployerPasswordParams{
+		ID:           employer.ID,
+		PasswordHash: string(hash),
+	}); err != nil {
+		slog.Error("failed to update employer password", "err", err)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "internal server error"})
+		return
+	}
+
+	slog.Info("employer password reset successfully", "email", magicToken.Email)
+	writeJSON(w, http.StatusOK, map[string]string{"message": "Password reset successfully. You can now sign in with your new password."})
+}
+
+func (h *EmployerHandler) sendResetEmail(to, resetLink string) error {
+	from := h.cfg.SMTPFrom
+	if from == "" {
+		from = h.cfg.SMTPUser
+	}
+
+	subject := "Reset Your Second Mission Password"
+	body := fmt.Sprintf(`Hello,
+
+You requested a password reset for your Second Mission employer account.
+
+Click the link below to set a new password:
+
+%s
+
+This link expires in 15 minutes. If you didn't request this, you can safely ignore this email — your password will remain unchanged.
+
+— Second Mission Team`, resetLink)
+
+	msg := fmt.Sprintf("From: %s\r\nTo: %s\r\nSubject: %s\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n%s",
+		from, to, subject, body)
+
+	auth := smtp.PlainAuth("", h.cfg.SMTPUser, h.cfg.SMTPPassword, h.cfg.SMTPHost)
+	addr := fmt.Sprintf("%s:%s", h.cfg.SMTPHost, h.cfg.SMTPPort)
+
+	return smtp.SendMail(addr, auth, from, []string{to}, []byte(msg))
 }
 
 // --- Profile ---

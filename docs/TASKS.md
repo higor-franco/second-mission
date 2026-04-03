@@ -27,6 +27,7 @@
 | Employer dashboard (candidate browse, match scores, WOTC flags) | Done | /employer/dashboard — stats (active listings, total candidates, placements), listing management with toggle, candidate cards with match scores and status progression |
 | Role posting (task-level descriptions) | Done | /employer/listings/new — create listings with civilian role category, task-level descriptions, requirements, benefits, salary, MOS preferences, WOTC flag |
 | Introduction requests | Done | Employer can advance candidate status: interested → introduced → interviewing → placed via dashboard |
+| Employer forgot/reset password | Done | POST /api/employer/forgot-password + POST /api/employer/reset-password, reuses magic_tokens table, SMTP email with 15-min expiry, frontend pages with full flow |
 
 ## Phase 3 — Platform Intelligence
 

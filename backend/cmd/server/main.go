@@ -93,6 +93,8 @@ func main() {
 	// Employer public routes
 	mux.HandleFunc("POST /api/employer/register", employerHandler.Register)
 	mux.HandleFunc("POST /api/employer/login", employerHandler.Login)
+	mux.HandleFunc("POST /api/employer/forgot-password", employerHandler.ForgotPassword)
+	mux.HandleFunc("POST /api/employer/reset-password", employerHandler.ResetPassword)
 	mux.HandleFunc("GET /api/civilian-roles", employerHandler.ListCivilianRoles)
 
 	// Protected employer routes

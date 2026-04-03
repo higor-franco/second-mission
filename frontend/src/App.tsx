@@ -10,6 +10,8 @@ import ProfilePage from '@/pages/ProfilePage'
 import OpportunitiesPage from '@/pages/OpportunitiesPage'
 import ApplicationsPage from '@/pages/ApplicationsPage'
 import EmployerLoginPage, { EmployerRegisterPage } from '@/pages/EmployerLoginPage'
+import EmployerForgotPasswordPage from '@/pages/EmployerForgotPasswordPage'
+import EmployerResetPasswordPage from '@/pages/EmployerResetPasswordPage'
 import EmployerDashboardPage from '@/pages/EmployerDashboardPage'
 import EmployerNewListingPage from '@/pages/EmployerNewListingPage'
 import EmployerProfilePage from '@/pages/EmployerProfilePage'
@@ -32,6 +34,12 @@ function App() {
           {/* Employer routes */}
           <Route path="/employer/login" element={
             <EmployerAuthProvider><EmployerLoginPage /></EmployerAuthProvider>
+          } />
+          <Route path="/employer/forgot-password" element={
+            <EmployerAuthProvider><EmployerForgotPasswordPage /></EmployerAuthProvider>
+          } />
+          <Route path="/employer/reset-password" element={
+            <EmployerAuthProvider><EmployerResetPasswordPage /></EmployerAuthProvider>
           } />
           <Route path="/employer/register" element={
             <EmployerAuthProvider><EmployerRegisterPage /></EmployerAuthProvider>
