@@ -8,6 +8,26 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type ActivityLog struct {
+	ID        int64              `json:"id"`
+	UserType  string             `json:"user_type"`
+	UserID    int32              `json:"user_id"`
+	SessionID pgtype.Text        `json:"session_id"`
+	Action    string             `json:"action"`
+	Details   []byte             `json:"details"`
+	IpAddress pgtype.Text        `json:"ip_address"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+type Admin struct {
+	ID           int32              `json:"id"`
+	Email        string             `json:"email"`
+	PasswordHash string             `json:"password_hash"`
+	Name         string             `json:"name"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+}
+
 type CivilianRole struct {
 	ID           int32  `json:"id"`
 	OnetCode     string `json:"onet_code"`

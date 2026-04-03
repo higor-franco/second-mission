@@ -38,3 +38,17 @@
 | Score breakdown UI on opportunities page | Done | AI MATCH badge, explanation text, expandable breakdown panel with visual bars for each dimension, matched skills highlighting |
 | Score breakdown on applications page | Done | AI Match label on scores, explanation text on application cards |
 | Cohort analytics | Pending | |
+
+## Phase 4 — Admin & Observability
+
+| Task | Status | Notes |
+|------|--------|-------|
+| Admin user system (auth, sessions) | Done | admins table, password+bcrypt auth, POST /api/admin/login, session cookies with user_type="admin", dev login endpoint |
+| Admin dashboard (platform overview) | Done | /admin/dashboard — stat cards (veterans, employers, listings, applications, placements), recent veterans, recent activity, recent applications |
+| Admin veterans management | Done | /admin/dashboard (Veterans tab) — full list with search by name/email/MOS/location, journey status badges |
+| Admin employers management | Done | /admin/dashboard (Employers tab) — full list with search by company/email/sector, active status badges |
+| Admin listings view | Done | /admin/dashboard (Listings tab) — all job listings with employer, sector, salary, WOTC, status |
+| Admin applications view | Done | /admin/dashboard (Applications tab) — all applications with status filter, match scores, veteran/employer details |
+| Activity logging system | Done | activity_logs table tracks all key user actions (login, register, update_profile, express_interest, create_listing, update_candidate_status) with session_id, IP, JSONB details |
+| Admin activity log viewer | Done | /admin/dashboard (Activity Log tab) — view last 10 sessions per user, session summaries with action counts, full activity timeline with details, user picker sidebar |
+| Admin backend tests | Done | 16 tests covering login, auth rejection, stats, list endpoints, activity logs, session queries, non-admin rejection |

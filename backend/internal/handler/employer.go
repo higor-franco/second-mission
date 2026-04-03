@@ -152,6 +152,11 @@ func (h *EmployerHandler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 	_ = sessionID
 
+	// Log activity
+	LogActivity(h.queries, r, "employer", employer.ID, "register", map[string]any{
+		"company_name": employer.CompanyName,
+	})
+
 	writeJSON(w, http.StatusCreated, map[string]any{
 		"message":  "registration successful",
 		"employer": toEmployerMeResponse(employer.ID, employer.Email, employer.CompanyName, employer.ContactName, employer.Sector, employer.Location, employer.Description, employer.IsActive),
@@ -196,6 +201,9 @@ func (h *EmployerHandler) Login(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "internal server error"})
 		return
 	}
+
+	// Log activity
+	LogActivity(h.queries, r, "employer", employer.ID, "login", map[string]any{"method": "password"})
 
 	writeJSON(w, http.StatusOK, map[string]any{
 		"message":  "logged in",
@@ -696,6 +704,11 @@ func (h *EmployerHandler) CreateJobListing(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
+	// Log activity
+	LogActivity(h.queries, r, "employer", session.UserID, "create_listing", map[string]any{
+		"listing_id": listing.ID, "title": listing.Title,
+	})
+
 	writeJSON(w, http.StatusCreated, map[string]any{
 		"message": "listing created",
 		"listing": map[string]any{
@@ -929,6 +942,11 @@ func (h *EmployerHandler) UpdateCandidateStatus(w http.ResponseWriter, r *http.R
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "internal server error"})
 		return
 	}
+
+	// Log activity
+	LogActivity(h.queries, r, "employer", session.UserID, "update_candidate_status", map[string]any{
+		"application_id": id, "new_status": req.Status,
+	})
 
 	writeJSON(w, http.StatusOK, app)
 }

@@ -116,6 +116,16 @@ The core product is an AI-powered skills translation engine that maps military M
 - Data privacy: veteran profiles visible only to matched employers
 - Secure authentication via magic link (no passwords)
 
+### Phase 4 — Admin & Observability
+
+**F10: Admin Panel (Command Center)**
+- Separate admin authentication (email + password, admin user type)
+- Platform overview dashboard with key metrics (total veterans, employers, active listings, applications, placements)
+- Full lists of all veterans, employers, job listings, and applications with search and filtering
+- Activity logging system that tracks key user actions (logins, profile updates, job interest, listing creation, candidate status changes)
+- Per-user activity log viewer showing activity across the last 10 sessions, with session summaries and detailed action timelines
+- Admin endpoints are fully access-controlled — only admin sessions can access admin data; veteran and employer sessions are rejected
+
 ## Out of Scope (for now)
 
 - Payment processing / billing system

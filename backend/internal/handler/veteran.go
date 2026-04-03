@@ -113,6 +113,11 @@ func (h *VeteranHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		sd = vet.SeparationDate.Time.Format("2006-01-02")
 	}
 
+	// Log activity
+	LogActivity(h.queries, r, "veteran", session.UserID, "update_profile", map[string]any{
+		"mos_code": mc, "location": req.Location,
+	})
+
 	writeJSON(w, http.StatusOK, meResponse{
 		ID:               vet.ID,
 		Email:            vet.Email,
@@ -494,6 +499,11 @@ func (h *VeteranHandler) ExpressInterest(w http.ResponseWriter, r *http.Request)
 			journeyStep = updated.JourneyStep
 		}
 	}
+
+	// Log activity
+	LogActivity(h.queries, r, "veteran", session.UserID, "express_interest", map[string]any{
+		"job_listing_id": req.JobListingID, "match_score": matchScore,
+	})
 
 	writeJSON(w, http.StatusOK, map[string]any{
 		"application":  app,

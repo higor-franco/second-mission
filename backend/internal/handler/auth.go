@@ -197,6 +197,9 @@ func (h *AuthHandler) VerifyToken(w http.ResponseWriter, r *http.Request) {
 		Secure:   !h.cfg.DevMode,
 	})
 
+	// Log activity
+	LogActivity(h.queries, r, "veteran", vet.ID, "login", map[string]any{"method": "magic_link"})
+
 	// Redirect to dashboard
 	http.Redirect(w, r, "/dashboard", http.StatusFound)
 }
@@ -260,6 +263,11 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	})
 
 	writeJSON(w, http.StatusOK, authResponse{Message: "logged out"})
+}
+
+// logVeteranActivity is a helper for veteran handlers to log activity
+func (h *AuthHandler) logVeteranActivity(r *http.Request, veteranID int32, action string, details map[string]any) {
+	LogActivity(h.queries, r, "veteran", veteranID, action, details)
 }
 
 // POST /api/dev/login — dev-only login endpoint

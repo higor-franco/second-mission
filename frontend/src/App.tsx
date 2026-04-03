@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from '@/lib/auth'
 import { EmployerAuthProvider } from '@/lib/employer-auth'
+import { AdminAuthProvider } from '@/lib/admin-auth'
 import LandingPage from '@/pages/LandingPage'
 import TranslatePage from '@/pages/TranslatePage'
 import LoginPage from '@/pages/LoginPage'
@@ -15,6 +16,8 @@ import EmployerResetPasswordPage from '@/pages/EmployerResetPasswordPage'
 import EmployerDashboardPage from '@/pages/EmployerDashboardPage'
 import EmployerNewListingPage from '@/pages/EmployerNewListingPage'
 import EmployerProfilePage from '@/pages/EmployerProfilePage'
+import AdminLoginPage from '@/pages/AdminLoginPage'
+import AdminDashboardPage from '@/pages/AdminDashboardPage'
 
 function App() {
   return (
@@ -52,6 +55,14 @@ function App() {
           } />
           <Route path="/employer/profile" element={
             <EmployerAuthProvider><EmployerProfilePage /></EmployerAuthProvider>
+          } />
+
+          {/* Admin routes */}
+          <Route path="/admin/login" element={
+            <AdminAuthProvider><AdminLoginPage /></AdminAuthProvider>
+          } />
+          <Route path="/admin/dashboard" element={
+            <AdminAuthProvider><AdminDashboardPage /></AdminAuthProvider>
           } />
         </Routes>
       </AuthProvider>

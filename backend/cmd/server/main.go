@@ -62,6 +62,7 @@ func main() {
 	authHandler := handler.NewAuthHandler(queries, cfg)
 	veteranHandler := handler.NewVeteranHandler(queries)
 	employerHandler := handler.NewEmployerHandler(queries, cfg)
+	adminHandler := handler.NewAdminHandler(queries, cfg)
 
 	mux := http.NewServeMux()
 
@@ -110,11 +111,25 @@ func main() {
 	mux.Handle("GET /api/employer/candidates", handler.RequireAuth(queries, employerHandler.ListCandidates))
 	mux.Handle("PUT /api/employer/candidates/{id}/status", handler.RequireAuth(queries, employerHandler.UpdateCandidateStatus))
 
+	// Admin public routes
+	mux.HandleFunc("POST /api/admin/login", adminHandler.Login)
+
+	// Protected admin routes
+	mux.Handle("GET /api/admin/me", handler.RequireAuth(queries, adminHandler.Me))
+	mux.Handle("GET /api/admin/stats", handler.RequireAuth(queries, adminHandler.Stats))
+	mux.Handle("GET /api/admin/veterans", handler.RequireAuth(queries, adminHandler.ListVeterans))
+	mux.Handle("GET /api/admin/employers", handler.RequireAuth(queries, adminHandler.ListEmployers))
+	mux.Handle("GET /api/admin/listings", handler.RequireAuth(queries, adminHandler.ListJobListings))
+	mux.Handle("GET /api/admin/applications", handler.RequireAuth(queries, adminHandler.ListApplications))
+	mux.Handle("GET /api/admin/activity", handler.RequireAuth(queries, adminHandler.ActivityLogs))
+	mux.Handle("GET /api/admin/sessions", handler.RequireAuth(queries, adminHandler.UserSessions))
+
 	// Dev-only login endpoints (only registered when DEV_MODE=1)
 	if cfg.DevMode {
 		slog.Warn("DEV_MODE enabled — dev login endpoints are active")
 		mux.HandleFunc("POST /api/dev/login", authHandler.DevLogin)
 		mux.HandleFunc("POST /api/dev/employer-login", employerHandler.DevLogin)
+		mux.HandleFunc("POST /api/dev/admin-login", adminHandler.DevLogin)
 	}
 
 	// Serve frontend (production only — in dev, Vite handles this)
