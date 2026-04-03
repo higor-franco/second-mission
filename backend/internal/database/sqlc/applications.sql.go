@@ -62,15 +62,26 @@ type CreateOrGetApplicationParams struct {
 	MatchScore   int32  `json:"match_score"`
 }
 
+type CreateOrGetApplicationRow struct {
+	ID           int32              `json:"id"`
+	VeteranID    int32              `json:"veteran_id"`
+	JobListingID int32              `json:"job_listing_id"`
+	Status       string             `json:"status"`
+	MatchScore   int32              `json:"match_score"`
+	Notes        string             `json:"notes"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+}
+
 // Creates an application if it doesn't exist, or returns the existing one
-func (q *Queries) CreateOrGetApplication(ctx context.Context, arg CreateOrGetApplicationParams) (VeteranApplication, error) {
+func (q *Queries) CreateOrGetApplication(ctx context.Context, arg CreateOrGetApplicationParams) (CreateOrGetApplicationRow, error) {
 	row := q.db.QueryRow(ctx, createOrGetApplication,
 		arg.VeteranID,
 		arg.JobListingID,
 		arg.Status,
 		arg.MatchScore,
 	)
-	var i VeteranApplication
+	var i CreateOrGetApplicationRow
 	err := row.Scan(
 		&i.ID,
 		&i.VeteranID,
@@ -117,9 +128,20 @@ type GetVeteranApplicationParams struct {
 	VeteranID int32 `json:"veteran_id"`
 }
 
-func (q *Queries) GetVeteranApplication(ctx context.Context, arg GetVeteranApplicationParams) (VeteranApplication, error) {
+type GetVeteranApplicationRow struct {
+	ID           int32              `json:"id"`
+	VeteranID    int32              `json:"veteran_id"`
+	JobListingID int32              `json:"job_listing_id"`
+	Status       string             `json:"status"`
+	MatchScore   int32              `json:"match_score"`
+	Notes        string             `json:"notes"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+}
+
+func (q *Queries) GetVeteranApplication(ctx context.Context, arg GetVeteranApplicationParams) (GetVeteranApplicationRow, error) {
 	row := q.db.QueryRow(ctx, getVeteranApplication, arg.ID, arg.VeteranID)
-	var i VeteranApplication
+	var i GetVeteranApplicationRow
 	err := row.Scan(
 		&i.ID,
 		&i.VeteranID,
@@ -135,7 +157,7 @@ func (q *Queries) GetVeteranApplication(ctx context.Context, arg GetVeteranAppli
 
 const getVeteranApplications = `-- name: GetVeteranApplications :many
 SELECT
-    va.id, va.status, va.match_score, va.notes, va.created_at, va.updated_at,
+    va.id, va.status, va.match_score, va.match_details, va.notes, va.created_at, va.updated_at,
     jl.id AS job_listing_id, jl.title, jl.description, jl.location,
     jl.salary_min, jl.salary_max, jl.employment_type, jl.wotc_eligible,
     cr.sector, cr.title AS role_title,
@@ -160,6 +182,7 @@ type GetVeteranApplicationsRow struct {
 	ID             int32              `json:"id"`
 	Status         string             `json:"status"`
 	MatchScore     int32              `json:"match_score"`
+	MatchDetails   []byte             `json:"match_details"`
 	Notes          string             `json:"notes"`
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
@@ -190,6 +213,7 @@ func (q *Queries) GetVeteranApplications(ctx context.Context, veteranID int32) (
 			&i.ID,
 			&i.Status,
 			&i.MatchScore,
+			&i.MatchDetails,
 			&i.Notes,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -215,6 +239,26 @@ func (q *Queries) GetVeteranApplications(ctx context.Context, veteranID int32) (
 	return items, nil
 }
 
+const updateApplicationMatchDetails = `-- name: UpdateApplicationMatchDetails :exec
+UPDATE veteran_applications SET
+    match_score = $2,
+    match_details = $3,
+    updated_at = NOW()
+WHERE id = $1
+`
+
+type UpdateApplicationMatchDetailsParams struct {
+	ID           int32  `json:"id"`
+	MatchScore   int32  `json:"match_score"`
+	MatchDetails []byte `json:"match_details"`
+}
+
+// Store hybrid match score and breakdown details
+func (q *Queries) UpdateApplicationMatchDetails(ctx context.Context, arg UpdateApplicationMatchDetailsParams) error {
+	_, err := q.db.Exec(ctx, updateApplicationMatchDetails, arg.ID, arg.MatchScore, arg.MatchDetails)
+	return err
+}
+
 const updateApplicationStatus = `-- name: UpdateApplicationStatus :one
 UPDATE veteran_applications SET
     status = $3,
@@ -229,9 +273,20 @@ type UpdateApplicationStatusParams struct {
 	Status    string `json:"status"`
 }
 
-func (q *Queries) UpdateApplicationStatus(ctx context.Context, arg UpdateApplicationStatusParams) (VeteranApplication, error) {
+type UpdateApplicationStatusRow struct {
+	ID           int32              `json:"id"`
+	VeteranID    int32              `json:"veteran_id"`
+	JobListingID int32              `json:"job_listing_id"`
+	Status       string             `json:"status"`
+	MatchScore   int32              `json:"match_score"`
+	Notes        string             `json:"notes"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+}
+
+func (q *Queries) UpdateApplicationStatus(ctx context.Context, arg UpdateApplicationStatusParams) (UpdateApplicationStatusRow, error) {
 	row := q.db.QueryRow(ctx, updateApplicationStatus, arg.ID, arg.VeteranID, arg.Status)
-	var i VeteranApplication
+	var i UpdateApplicationStatusRow
 	err := row.Scan(
 		&i.ID,
 		&i.VeteranID,

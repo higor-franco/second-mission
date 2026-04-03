@@ -109,4 +109,5 @@ type VeteranApplication struct {
 	Notes        string             `json:"notes"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+	MatchDetails []byte             `json:"match_details"`
 }

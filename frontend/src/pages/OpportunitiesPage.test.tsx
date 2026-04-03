@@ -38,6 +38,16 @@ const mockOpportunities = [
     company_location: 'Houston, TX',
     match_score: 88,
     transferable_skills: ['fleet management', 'logistics coordination'],
+    score_breakdown: {
+      mos_base_score: 88,
+      skills_overlap: 85,
+      sector_alignment: 100,
+      mos_preference: 100,
+      location_match: 90,
+      hybrid_score: 91,
+      matched_skills: ['fleet management', 'logistics coordination'],
+      explanation: 'Strong military skills match, excellent skills overlap with job tasks, employer specifically seeks your MOS, and matches your preferred sector.',
+    },
   },
   {
     id: 2,
@@ -55,6 +65,16 @@ const mockOpportunities = [
     company_location: 'Houston, TX',
     match_score: 95,
     transferable_skills: ['vehicle operation', 'cargo handling'],
+    score_breakdown: {
+      mos_base_score: 95,
+      skills_overlap: 85,
+      sector_alignment: 100,
+      mos_preference: 100,
+      location_match: 100,
+      hybrid_score: 95,
+      matched_skills: ['vehicle operation'],
+      explanation: 'Strong military skills match, excellent skills overlap, employer specifically seeks your MOS, and in your area.',
+    },
   },
 ]
 
@@ -191,6 +211,79 @@ describe('OpportunitiesPage', () => {
     await waitFor(() => {
       expect(screen.getByText('✓ Interested')).toBeInTheDocument()
     })
+  })
+
+  it('shows AI MATCH badge for opportunities with score breakdown', async () => {
+    mockVeteran = {
+      id: 1,
+      email: 'vet@example.com',
+      name: 'Test Vet',
+      mos_code: '88M',
+      rank: 'E-5',
+      years_of_service: 4,
+      separation_date: '',
+      location: 'Houston, TX',
+      preferred_sectors: ['Logistics'],
+      profile_complete: true,
+      journey_step: 'match',
+    }
+    renderPage()
+    await screen.findByText('Fleet Operations Manager')
+    const aiBadges = screen.getAllByText('AI MATCH')
+    expect(aiBadges.length).toBe(2)
+  })
+
+  it('shows AI explanation text for each opportunity', async () => {
+    mockVeteran = {
+      id: 1,
+      email: 'vet@example.com',
+      name: 'Test Vet',
+      mos_code: '88M',
+      rank: 'E-5',
+      years_of_service: 4,
+      separation_date: '',
+      location: 'Houston, TX',
+      preferred_sectors: ['Logistics'],
+      profile_complete: true,
+      journey_step: 'match',
+    }
+    renderPage()
+    await screen.findByText('Fleet Operations Manager')
+    // Both opportunities have explanation text
+    expect(screen.getByText(/Strong military skills match, excellent skills overlap with job tasks/)).toBeInTheDocument()
+  })
+
+  it('shows score breakdown panel when details expanded', async () => {
+    mockVeteran = {
+      id: 1,
+      email: 'vet@example.com',
+      name: 'Test Vet',
+      mos_code: '88M',
+      rank: 'E-5',
+      years_of_service: 4,
+      separation_date: '',
+      location: 'Houston, TX',
+      preferred_sectors: ['Logistics'],
+      profile_complete: true,
+      journey_step: 'match',
+    }
+    const user = userEvent.setup()
+    renderPage()
+    await screen.findByText('Fleet Operations Manager')
+
+    // Click details on first opportunity
+    const detailButtons = screen.getAllByText('Details ↓')
+    await user.click(detailButtons[0])
+
+    // Should show AI MATCH ANALYSIS section with breakdown bars
+    expect(screen.getByText('AI MATCH ANALYSIS')).toBeInTheDocument()
+    expect(screen.getByText('MOS SKILLS')).toBeInTheDocument()
+    expect(screen.getByText('TASK OVERLAP')).toBeInTheDocument()
+    expect(screen.getByText('SECTOR FIT')).toBeInTheDocument()
+    expect(screen.getByText('MOS PREFERRED')).toBeInTheDocument()
+    expect(screen.getByText('LOCATION')).toBeInTheDocument()
+    // Should show matched skills
+    expect(screen.getByText('SKILLS THAT MATCH THIS JOB')).toBeInTheDocument()
   })
 
   it('filters by sector when sector button clicked', async () => {

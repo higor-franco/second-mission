@@ -597,9 +597,20 @@ type UpdateCandidateStatusParams struct {
 	Status     string      `json:"status"`
 }
 
-func (q *Queries) UpdateCandidateStatus(ctx context.Context, arg UpdateCandidateStatusParams) (VeteranApplication, error) {
+type UpdateCandidateStatusRow struct {
+	ID           int32              `json:"id"`
+	VeteranID    int32              `json:"veteran_id"`
+	JobListingID int32              `json:"job_listing_id"`
+	Status       string             `json:"status"`
+	MatchScore   int32              `json:"match_score"`
+	Notes        string             `json:"notes"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+}
+
+func (q *Queries) UpdateCandidateStatus(ctx context.Context, arg UpdateCandidateStatusParams) (UpdateCandidateStatusRow, error) {
 	row := q.db.QueryRow(ctx, updateCandidateStatus, arg.ID, arg.EmployerID, arg.Status)
-	var i VeteranApplication
+	var i UpdateCandidateStatusRow
 	err := row.Scan(
 		&i.ID,
 		&i.VeteranID,

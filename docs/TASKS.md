@@ -32,6 +32,8 @@
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Task-level matching algorithm | Pending | |
+| Hybrid AI matching engine | Done | 5-dimension scoring: MOS base (35%), skills overlap (25%), sector alignment (15%), MOS preference (15%), location match (10%). Computed on-the-fly with explainable breakdowns. Go matcher package with 11 unit tests |
 | Pipeline tracking (Matched → Introduced → Interviewed → Hired) | Done (veteran side) | Employer side now done — bidirectional status management |
+| Score breakdown UI on opportunities page | Done | AI MATCH badge, explanation text, expandable breakdown panel with visual bars for each dimension, matched skills highlighting |
+| Score breakdown on applications page | Done | AI Match label on scores, explanation text on application cards |
 | Cohort analytics | Pending | |

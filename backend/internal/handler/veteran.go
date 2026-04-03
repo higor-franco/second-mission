@@ -4,12 +4,14 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"sort"
 	"strconv"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/higor-franco/second-mission/backend/internal/database/sqlc"
+	"github.com/higor-franco/second-mission/backend/internal/matcher"
 )
 
 type VeteranHandler struct {
@@ -177,39 +179,41 @@ func (h *VeteranHandler) Matches(w http.ResponseWriter, r *http.Request) {
 // --- Opportunities & Applications ---
 
 type opportunityResponse struct {
-	ID                 int32    `json:"id"`
-	Title              string   `json:"title"`
-	Description        string   `json:"description"`
-	Requirements       []string `json:"requirements"`
-	Location           string   `json:"location"`
-	SalaryMin          int32    `json:"salary_min"`
-	SalaryMax          int32    `json:"salary_max"`
-	EmploymentType     string   `json:"employment_type"`
-	WotcEligible       bool     `json:"wotc_eligible"`
-	Sector             string   `json:"sector"`
-	RoleTitle          string   `json:"role_title"`
-	CompanyName        string   `json:"company_name"`
-	CompanyLocation    string   `json:"company_location"`
-	MatchScore         int32    `json:"match_score"`
-	TransferableSkills []string `json:"transferable_skills"`
+	ID                 int32                  `json:"id"`
+	Title              string                 `json:"title"`
+	Description        string                 `json:"description"`
+	Requirements       []string               `json:"requirements"`
+	Location           string                 `json:"location"`
+	SalaryMin          int32                  `json:"salary_min"`
+	SalaryMax          int32                  `json:"salary_max"`
+	EmploymentType     string                 `json:"employment_type"`
+	WotcEligible       bool                   `json:"wotc_eligible"`
+	Sector             string                 `json:"sector"`
+	RoleTitle          string                 `json:"role_title"`
+	CompanyName        string                 `json:"company_name"`
+	CompanyLocation    string                 `json:"company_location"`
+	MatchScore         int32                  `json:"match_score"`
+	TransferableSkills []string               `json:"transferable_skills"`
+	ScoreBreakdown     *matcher.ScoreBreakdown `json:"score_breakdown,omitempty"`
 }
 
 type applicationResponse struct {
-	ID             int32  `json:"id"`
-	Status         string `json:"status"`
-	MatchScore     int32  `json:"match_score"`
-	Notes          string `json:"notes"`
-	JobListingID   int32  `json:"job_listing_id"`
-	Title          string `json:"title"`
-	Description    string `json:"description"`
-	Location       string `json:"location"`
-	SalaryMin      int32  `json:"salary_min"`
-	SalaryMax      int32  `json:"salary_max"`
-	EmploymentType string `json:"employment_type"`
-	WotcEligible   bool   `json:"wotc_eligible"`
-	Sector         string `json:"sector"`
-	RoleTitle      string `json:"role_title"`
-	CompanyName    string `json:"company_name"`
+	ID             int32                  `json:"id"`
+	Status         string                 `json:"status"`
+	MatchScore     int32                  `json:"match_score"`
+	MatchDetails   *matcher.ScoreBreakdown `json:"match_details,omitempty"`
+	Notes          string                 `json:"notes"`
+	JobListingID   int32                  `json:"job_listing_id"`
+	Title          string                 `json:"title"`
+	Description    string                 `json:"description"`
+	Location       string                 `json:"location"`
+	SalaryMin      int32                  `json:"salary_min"`
+	SalaryMax      int32                  `json:"salary_max"`
+	EmploymentType string                 `json:"employment_type"`
+	WotcEligible   bool                   `json:"wotc_eligible"`
+	Sector         string                 `json:"sector"`
+	RoleTitle      string                 `json:"role_title"`
+	CompanyName    string                 `json:"company_name"`
 }
 
 // GET /api/veteran/opportunities
@@ -249,6 +253,14 @@ func (h *VeteranHandler) Opportunities(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Build veteran profile for hybrid matching
+	vetProfile := matcher.VeteranProfile{
+		MOSCode:          vet.MosCode.String,
+		PreferredSectors: vet.PreferredSectors,
+		Location:         vet.Location,
+		YearsOfService:   vet.YearsOfService,
+	}
+
 	opps := make([]opportunityResponse, len(rows))
 	for i, row := range rows {
 		cn := ""
@@ -259,6 +271,21 @@ func (h *VeteranHandler) Opportunities(w http.ResponseWriter, r *http.Request) {
 		if row.CompanyLocation.Valid {
 			cl = row.CompanyLocation.String
 		}
+
+		// Compute hybrid score
+		listing := matcher.JobListing{
+			ID:                 row.ID,
+			Title:              row.Title,
+			Sector:             row.Sector,
+			Location:           row.Location,
+			Requirements:       row.Requirements,
+			Tasks:              row.Tasks,
+			MOSCodesPreferred:  row.MosCodesPreferred,
+			TransferableSkills: row.TransferableSkills,
+			MOSBaseScore:       row.MatchScore,
+		}
+		breakdown := matcher.ComputeScore(vetProfile, listing)
+
 		opps[i] = opportunityResponse{
 			ID:                 row.ID,
 			Title:              row.Title,
@@ -273,10 +300,16 @@ func (h *VeteranHandler) Opportunities(w http.ResponseWriter, r *http.Request) {
 			RoleTitle:          row.RoleTitle,
 			CompanyName:        cn,
 			CompanyLocation:    cl,
-			MatchScore:         row.MatchScore,
+			MatchScore:         int32(breakdown.HybridScore),
 			TransferableSkills: row.TransferableSkills,
+			ScoreBreakdown:     &breakdown,
 		}
 	}
+
+	// Sort by hybrid score descending
+	sort.Slice(opps, func(i, j int) bool {
+		return opps[i].MatchScore > opps[j].MatchScore
+	})
 
 	// Auto-advance journey to "match" if they have opportunities
 	journeyStep := vet.JourneyStep
@@ -315,10 +348,20 @@ func (h *VeteranHandler) Applications(w http.ResponseWriter, r *http.Request) {
 		if row.CompanyName.Valid {
 			cn = row.CompanyName.String
 		}
+
+		var details *matcher.ScoreBreakdown
+		if len(row.MatchDetails) > 0 {
+			var bd matcher.ScoreBreakdown
+			if json.Unmarshal(row.MatchDetails, &bd) == nil {
+				details = &bd
+			}
+		}
+
 		apps[i] = applicationResponse{
 			ID:             row.ID,
 			Status:         row.Status,
 			MatchScore:     row.MatchScore,
+			MatchDetails:   details,
 			Notes:          row.Notes,
 			JobListingID:   row.JobListingID,
 			Title:          row.Title,
@@ -382,14 +425,34 @@ func (h *VeteranHandler) ExpressInterest(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Find the match score from matched listings
+	// Find the match score using hybrid matching
 	var matchScore int32
+	var breakdown *matcher.ScoreBreakdown
 	if vet.MosCode.Valid {
 		listings, listErr := h.queries.ListMatchedJobListings(r.Context(), vet.MosCode.String)
 		if listErr == nil {
+			vetProfile := matcher.VeteranProfile{
+				MOSCode:          vet.MosCode.String,
+				PreferredSectors: vet.PreferredSectors,
+				Location:         vet.Location,
+				YearsOfService:   vet.YearsOfService,
+			}
 			for _, l := range listings {
 				if l.ID == req.JobListingID {
-					matchScore = l.MatchScore
+					listing := matcher.JobListing{
+						ID:                 l.ID,
+						Title:              l.Title,
+						Sector:             l.Sector,
+						Location:           l.Location,
+						Requirements:       l.Requirements,
+						Tasks:              l.Tasks,
+						MOSCodesPreferred:  l.MosCodesPreferred,
+						TransferableSkills: l.TransferableSkills,
+						MOSBaseScore:       l.MatchScore,
+					}
+					bd := matcher.ComputeScore(vetProfile, listing)
+					breakdown = &bd
+					matchScore = int32(bd.HybridScore)
 					break
 				}
 			}
@@ -402,6 +465,18 @@ func (h *VeteranHandler) ExpressInterest(w http.ResponseWriter, r *http.Request)
 		Status:       "interested",
 		MatchScore:   matchScore,
 	})
+
+	// Store the match details if we computed them
+	if err == nil && breakdown != nil {
+		detailsJSON, jsonErr := json.Marshal(breakdown)
+		if jsonErr == nil {
+			_ = h.queries.UpdateApplicationMatchDetails(r.Context(), sqlc.UpdateApplicationMatchDetailsParams{
+				ID:           app.ID,
+				MatchScore:   matchScore,
+				MatchDetails: detailsJSON,
+			})
+		}
+	}
 	if err != nil {
 		slog.Error("failed to create application", "veteran_id", session.UserID, "job_id", req.JobListingID, "err", err)
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "internal server error"})

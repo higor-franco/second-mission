@@ -12,10 +12,11 @@ WHERE jl.id = $1;
 
 -- name: ListMatchedJobListings :many
 -- Returns active job listings that match a veteran's MOS code, with match scores
+-- Includes tasks and mos_codes_preferred for hybrid matching engine
 SELECT
     jl.id, jl.title, jl.description, jl.requirements, jl.location,
     jl.salary_min, jl.salary_max, jl.employment_type, jl.wotc_eligible,
-    jl.posted_at,
+    jl.posted_at, jl.tasks, jl.mos_codes_preferred,
     cr.onet_code, cr.title AS role_title, cr.sector,
     e.company_name, e.location AS company_location,
     mcm.match_score, mcm.transferable_skills

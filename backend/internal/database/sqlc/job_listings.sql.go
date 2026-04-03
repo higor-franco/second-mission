@@ -82,7 +82,7 @@ const listMatchedJobListings = `-- name: ListMatchedJobListings :many
 SELECT
     jl.id, jl.title, jl.description, jl.requirements, jl.location,
     jl.salary_min, jl.salary_max, jl.employment_type, jl.wotc_eligible,
-    jl.posted_at,
+    jl.posted_at, jl.tasks, jl.mos_codes_preferred,
     cr.onet_code, cr.title AS role_title, cr.sector,
     e.company_name, e.location AS company_location,
     mcm.match_score, mcm.transferable_skills
@@ -105,6 +105,8 @@ type ListMatchedJobListingsRow struct {
 	EmploymentType     string             `json:"employment_type"`
 	WotcEligible       bool               `json:"wotc_eligible"`
 	PostedAt           pgtype.Timestamptz `json:"posted_at"`
+	Tasks              []string           `json:"tasks"`
+	MosCodesPreferred  []string           `json:"mos_codes_preferred"`
 	OnetCode           string             `json:"onet_code"`
 	RoleTitle          string             `json:"role_title"`
 	Sector             string             `json:"sector"`
@@ -115,6 +117,7 @@ type ListMatchedJobListingsRow struct {
 }
 
 // Returns active job listings that match a veteran's MOS code, with match scores
+// Includes tasks and mos_codes_preferred for hybrid matching engine
 func (q *Queries) ListMatchedJobListings(ctx context.Context, mosCode string) ([]ListMatchedJobListingsRow, error) {
 	rows, err := q.db.Query(ctx, listMatchedJobListings, mosCode)
 	if err != nil {
@@ -135,6 +138,8 @@ func (q *Queries) ListMatchedJobListings(ctx context.Context, mosCode string) ([
 			&i.EmploymentType,
 			&i.WotcEligible,
 			&i.PostedAt,
+			&i.Tasks,
+			&i.MosCodesPreferred,
 			&i.OnetCode,
 			&i.RoleTitle,
 			&i.Sector,

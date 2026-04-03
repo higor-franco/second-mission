@@ -1,7 +1,7 @@
 -- name: GetVeteranApplications :many
 -- Returns all applications for a veteran with job listing and employer details
 SELECT
-    va.id, va.status, va.match_score, va.notes, va.created_at, va.updated_at,
+    va.id, va.status, va.match_score, va.match_details, va.notes, va.created_at, va.updated_at,
     jl.id AS job_listing_id, jl.title, jl.description, jl.location,
     jl.salary_min, jl.salary_max, jl.employment_type, jl.wotc_eligible,
     cr.sector, cr.title AS role_title,
@@ -52,6 +52,14 @@ SELECT status, COUNT(*) AS count
 FROM veteran_applications
 WHERE veteran_id = $1
 GROUP BY status;
+
+-- name: UpdateApplicationMatchDetails :exec
+-- Store hybrid match score and breakdown details
+UPDATE veteran_applications SET
+    match_score = $2,
+    match_details = $3,
+    updated_at = NOW()
+WHERE id = $1;
 
 -- name: EnsureMatchedApplications :exec
 -- Auto-create matched applications for a veteran based on their MOS

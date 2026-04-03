@@ -2,10 +2,22 @@ import { useEffect, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { useAuth } from '@/lib/auth'
 
+interface MatchDetails {
+  mos_base_score: number
+  skills_overlap: number
+  sector_alignment: number
+  mos_preference: number
+  location_match: number
+  hybrid_score: number
+  matched_skills: string[]
+  explanation: string
+}
+
 interface Application {
   id: number
   status: string
   match_score: number
+  match_details?: MatchDetails
   notes: string
   job_listing_id: number
   title: string
@@ -299,13 +311,22 @@ export default function ApplicationsPage() {
                           <div className="font-heading text-lg text-[var(--navy)]">
                             {formatSalary(app.salary_min)} – {formatSalary(app.salary_max)}
                           </div>
-                          <div className="text-xs text-[var(--muted-foreground)]">Match: {app.match_score}%</div>
+                          <div className="text-xs text-[var(--muted-foreground)]">
+                            {app.match_details ? 'AI Match' : 'Match'}: {app.match_score}%
+                          </div>
                         </div>
                       </div>
 
                       <p className="text-sm text-[var(--muted-foreground)] mt-2 leading-relaxed line-clamp-2">
                         {app.description}
                       </p>
+
+                      {/* AI match explanation */}
+                      {app.match_details && (
+                        <p className="text-xs text-[var(--navy-light)] mt-1.5 italic">
+                          {app.match_details.explanation}
+                        </p>
+                      )}
 
                       {/* Status description */}
                       <p className="text-xs text-[var(--muted-foreground)] mt-3 italic border-l-2 border-[var(--gold)] pl-3">

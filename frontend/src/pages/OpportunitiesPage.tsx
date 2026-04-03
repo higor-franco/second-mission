@@ -2,6 +2,17 @@ import { useEffect, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { useAuth } from '@/lib/auth'
 
+interface ScoreBreakdown {
+  mos_base_score: number
+  skills_overlap: number
+  sector_alignment: number
+  mos_preference: number
+  location_match: number
+  hybrid_score: number
+  matched_skills: string[]
+  explanation: string
+}
+
 interface Opportunity {
   id: number
   title: string
@@ -18,6 +29,7 @@ interface Opportunity {
   company_location: string
   match_score: number
   transferable_skills: string[]
+  score_breakdown?: ScoreBreakdown
 }
 
 const SECTOR_COLORS: Record<string, string> = {
@@ -34,6 +46,59 @@ const SECTOR_COLORS: Record<string, string> = {
 
 function formatSalary(n: number) {
   return '$' + (n / 1000).toFixed(0) + 'K'
+}
+
+function ScoreBar({ label, value, weight, icon }: { label: string; value: number; weight: number; icon: string }) {
+  const barColor = value >= 85 ? 'bg-emerald-500' : value >= 70 ? 'bg-[var(--gold)]' : value >= 50 ? 'bg-[var(--navy-light)]' : 'bg-gray-400'
+  return (
+    <div className="flex items-center gap-3">
+      <span className="text-sm w-5 text-center flex-shrink-0">{icon}</span>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center justify-between mb-0.5">
+          <span className="text-xs font-semibold text-[var(--navy)] tracking-wide">{label}</span>
+          <span className="text-xs text-[var(--muted-foreground)] tabular-nums">{value}% <span className="opacity-60">({weight}%w)</span></span>
+        </div>
+        <div className="h-1.5 bg-[var(--sand)] rounded-full overflow-hidden">
+          <div
+            className={`h-full rounded-full transition-all duration-700 ease-out ${barColor}`}
+            style={{ width: `${value}%` }}
+          />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ScoreBreakdownPanel({ breakdown }: { breakdown: ScoreBreakdown }) {
+  return (
+    <div className="space-y-4">
+      <div>
+        <h4 className="font-heading text-sm tracking-widest text-[var(--gold-dark)] mb-3">AI MATCH ANALYSIS</h4>
+        <p className="text-sm text-[var(--navy)] leading-relaxed italic mb-4">
+          "{breakdown.explanation}"
+        </p>
+      </div>
+      <div className="space-y-2.5">
+        <ScoreBar label="MOS SKILLS" value={breakdown.mos_base_score} weight={35} icon="🎖️" />
+        <ScoreBar label="TASK OVERLAP" value={breakdown.skills_overlap} weight={25} icon="🔧" />
+        <ScoreBar label="SECTOR FIT" value={breakdown.sector_alignment} weight={15} icon="🏭" />
+        <ScoreBar label="MOS PREFERRED" value={breakdown.mos_preference} weight={15} icon="📋" />
+        <ScoreBar label="LOCATION" value={breakdown.location_match} weight={10} icon="📍" />
+      </div>
+      {breakdown.matched_skills && breakdown.matched_skills.length > 0 && (
+        <div className="pt-2 border-t border-[var(--sand-dark)]">
+          <span className="text-xs font-semibold tracking-wider text-[var(--gold-dark)]">SKILLS THAT MATCH THIS JOB</span>
+          <div className="flex flex-wrap gap-1.5 mt-2">
+            {breakdown.matched_skills.map(skill => (
+              <span key={skill} className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-sm font-medium">
+                {skill}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
 }
 
 function MatchScoreRing({ score }: { score: number }) {
@@ -153,7 +218,7 @@ export default function OpportunitiesPage() {
               </h1>
               {veteran.mos_code && (
                 <p className="text-[var(--muted-foreground)] mt-2">
-                  Based on MOS <strong className="text-[var(--navy)]">{veteran.mos_code}</strong> — {opportunities.length} active jobs from Texas employers
+                  AI-matched for MOS <strong className="text-[var(--navy)]">{veteran.mos_code}</strong> — {opportunities.length} active jobs ranked by your profile, skills, sector, and location
                 </p>
               )}
             </div>
@@ -241,7 +306,14 @@ export default function OpportunitiesPage() {
                       <div className="p-6">
                         <div className="flex items-start gap-5">
                           {/* Match score */}
-                          <MatchScoreRing score={opp.match_score} />
+                          <div className="flex flex-col items-center gap-1">
+                            <MatchScoreRing score={opp.match_score} />
+                            {opp.score_breakdown && (
+                              <span className="text-[9px] font-bold tracking-widest text-[var(--gold-dark)] bg-[var(--sand)] px-1.5 py-0.5 rounded-sm">
+                                AI MATCH
+                              </span>
+                            )}
+                          </div>
 
                           {/* Content */}
                           <div className="flex-1 min-w-0">
@@ -273,6 +345,13 @@ export default function OpportunitiesPage() {
                             <p className="text-sm text-[var(--muted-foreground)] leading-relaxed mt-2 line-clamp-2">
                               {opp.description}
                             </p>
+
+                            {/* AI explanation one-liner */}
+                            {opp.score_breakdown && (
+                              <p className="text-xs text-[var(--navy-light)] mt-1.5 italic">
+                                {opp.score_breakdown.explanation}
+                              </p>
+                            )}
 
                             {/* Transferable skills */}
                             {opp.transferable_skills.length > 0 && (
@@ -321,7 +400,12 @@ export default function OpportunitiesPage() {
                       {/* Expanded details */}
                       {isExpanding && (
                         <div className="border-t border-[var(--sand-dark)] px-6 py-5 bg-[var(--cream)]/60">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                          <div className={`grid grid-cols-1 ${opp.score_breakdown ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-8`}>
+                            {opp.score_breakdown && (
+                              <div className="md:border-r md:border-[var(--sand-dark)] md:pr-6">
+                                <ScoreBreakdownPanel breakdown={opp.score_breakdown} />
+                              </div>
+                            )}
                             <div>
                               <h4 className="font-heading text-sm tracking-widest text-[var(--gold-dark)] mb-3">FULL DESCRIPTION</h4>
                               <p className="text-sm text-[var(--muted-foreground)] leading-relaxed">{opp.description}</p>
