@@ -129,12 +129,28 @@ export default function OpportunitiesPage() {
 
   useEffect(() => {
     if (!veteran) return
-    fetch('/api/veteran/opportunities', { credentials: 'include' })
-      .then(res => res.json())
-      .then(data => {
-        setOpportunities(data.opportunities || [])
-        if (data.journey_step) {
-          updateVeteran({ journey_step: data.journey_step })
+
+    // Fetch opportunities and existing applications in parallel
+    Promise.all([
+      fetch('/api/veteran/opportunities', { credentials: 'include' }).then(r => r.json()),
+      fetch('/api/veteran/applications', { credentials: 'include' }).then(r => r.json()),
+    ])
+      .then(([oppsData, appsData]) => {
+        setOpportunities(oppsData.opportunities || [])
+        if (oppsData.journey_step) {
+          updateVeteran({ journey_step: oppsData.journey_step })
+        }
+
+        // Pre-fill expressed set with jobs the veteran already expressed interest in
+        // (any status beyond "matched" means they already clicked Express Interest)
+        const apps = appsData.applications || []
+        const alreadyExpressed = new Set<number>(
+          apps
+            .filter((a: { status: string }) => a.status !== 'matched')
+            .map((a: { job_listing_id: number }) => a.job_listing_id)
+        )
+        if (alreadyExpressed.size > 0) {
+          setExpressed(alreadyExpressed)
         }
       })
       .catch(() => {})

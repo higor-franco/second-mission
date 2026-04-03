@@ -90,9 +90,18 @@ describe('OpportunitiesPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockLoading = false
-    mockFetch.mockResolvedValue({
-      json: () => Promise.resolve({ opportunities: mockOpportunities }),
-      ok: true,
+    // Page now fetches both opportunities and applications in parallel
+    mockFetch.mockImplementation((url: string) => {
+      if (url.includes('/api/veteran/applications')) {
+        return Promise.resolve({
+          json: () => Promise.resolve({ applications: [], status_counts: {} }),
+          ok: true,
+        })
+      }
+      return Promise.resolve({
+        json: () => Promise.resolve({ opportunities: mockOpportunities }),
+        ok: true,
+      })
     })
   })
 
@@ -197,8 +206,11 @@ describe('OpportunitiesPage', () => {
       profile_complete: true,
       journey_step: 'match',
     }
+    // First two calls: opportunities + applications (parallel on mount)
+    // Third call: express interest POST
     mockFetch
       .mockResolvedValueOnce({ json: () => Promise.resolve({ opportunities: mockOpportunities }), ok: true })
+      .mockResolvedValueOnce({ json: () => Promise.resolve({ applications: [], status_counts: {} }), ok: true })
       .mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ id: 1, status: 'interested' }) })
 
     const user = userEvent.setup()
@@ -251,6 +263,45 @@ describe('OpportunitiesPage', () => {
     await screen.findByText('Fleet Operations Manager')
     // Both opportunities have explanation text
     expect(screen.getByText(/Strong military skills match, excellent skills overlap with job tasks/)).toBeInTheDocument()
+  })
+
+  it('shows already-expressed interest from saved applications', async () => {
+    mockVeteran = {
+      id: 1,
+      email: 'vet@example.com',
+      name: 'Test Vet',
+      mos_code: '88M',
+      rank: 'E-5',
+      years_of_service: 4,
+      separation_date: '',
+      location: 'Houston, TX',
+      preferred_sectors: ['Logistics'],
+      profile_complete: true,
+      journey_step: 'match',
+    }
+    // Return one application with "interested" status for job_listing_id 1
+    mockFetch.mockImplementation((url: string) => {
+      if (url.includes('/api/veteran/applications')) {
+        return Promise.resolve({
+          json: () => Promise.resolve({
+            applications: [{ job_listing_id: 1, status: 'interested' }],
+            status_counts: { interested: 1 },
+          }),
+          ok: true,
+        })
+      }
+      return Promise.resolve({
+        json: () => Promise.resolve({ opportunities: mockOpportunities }),
+        ok: true,
+      })
+    })
+    renderPage()
+    await screen.findByText('Fleet Operations Manager')
+
+    // Job 1 should already be marked as interested
+    expect(screen.getByText('✓ Interested')).toBeInTheDocument()
+    // Job 2 should still show Express Interest
+    expect(screen.getByText('Express Interest')).toBeInTheDocument()
   })
 
   it('shows score breakdown panel when details expanded', async () => {
