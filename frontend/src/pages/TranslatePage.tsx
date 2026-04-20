@@ -33,6 +33,7 @@ interface DD214MOSEntry {
 }
 
 interface DD214Profile {
+  name: string
   primary_mos: DD214MOSEntry
   secondary_mos: DD214MOSEntry[]
   additional_skills: string[]
@@ -431,21 +432,31 @@ function DD214Result({ result }: { result: DD214Response }) {
           <div>
             <span className="font-heading text-sm tracking-[0.3em] text-[var(--gold)]">EXTRACTED FROM YOUR DD-214</span>
             <h2 className="font-heading text-3xl md:text-4xl tracking-wide mt-2">
-              {profile.rank
-                ? `${profile.rank.toUpperCase()}${profile.branch ? `, ${profile.branch.toUpperCase()}` : ''}`
-                : 'YOUR MILITARY PROFILE'}
+              {profile.name
+                ? profile.name.toUpperCase()
+                : profile.rank
+                  ? `${profile.rank.toUpperCase()}${profile.branch ? `, ${profile.branch.toUpperCase()}` : ''}`
+                  : 'YOUR MILITARY PROFILE'}
             </h2>
-            <div className="flex flex-wrap gap-6 mt-4 text-sm text-[var(--sand-dark)]">
-              {profile.paygrade && (
-                <div><span className="text-[var(--gold)] font-semibold">Paygrade:</span> {profile.paygrade}</div>
-              )}
-              {profile.years_of_service > 0 && (
-                <div><span className="text-[var(--gold)] font-semibold">Service:</span> {profile.years_of_service} years</div>
-              )}
-              {profile.separation_reason && (
-                <div><span className="text-[var(--gold)] font-semibold">Separation:</span> {profile.separation_reason}</div>
-              )}
-            </div>
+            {/* Subtitle line: rank · branch · years · paygrade — only rendered when we have a name above. */}
+            {profile.name && (profile.rank || profile.branch || profile.years_of_service > 0 || profile.paygrade) && (
+              <div className="mt-2 text-sm md:text-base text-[var(--sand-dark)]">
+                {[
+                  profile.rank,
+                  profile.branch ? `U.S. ${profile.branch}` : '',
+                  profile.years_of_service > 0 ? `${profile.years_of_service} years of service` : '',
+                  profile.paygrade,
+                ]
+                  .filter(Boolean)
+                  .join(' · ')}
+              </div>
+            )}
+            {/* Separation reason kept as a secondary fact so the hero doesn't get crowded. */}
+            {profile.separation_reason && (
+              <div className="mt-3 text-xs text-[var(--sand-dark)]">
+                <span className="text-[var(--gold)] font-semibold">Separation:</span> {profile.separation_reason}
+              </div>
+            )}
           </div>
           <div className="text-right">
             <div className="font-heading text-5xl text-[var(--gold)]">{roles.length}</div>

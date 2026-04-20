@@ -174,6 +174,7 @@ describe('TranslatePage', () => {
 
   const mockDD214Response = {
     profile: {
+      name: 'John A. Doe',
       primary_mos: { code: '88M', title: 'Motor Transport Operator' },
       secondary_mos: [{ code: '92Y', title: 'Unit Supply Specialist' }],
       additional_skills: ['Air Assault'],
@@ -265,8 +266,12 @@ describe('TranslatePage', () => {
 
     await waitFor(() => {
       expect(screen.getByText(/EXTRACTED FROM YOUR DD-214/i)).toBeInTheDocument()
-      // Rank + branch header
-      expect(screen.getByText('STAFF SERGEANT, ARMY')).toBeInTheDocument()
+      // Name as the main title.
+      expect(screen.getByText('JOHN A. DOE')).toBeInTheDocument()
+      // Rank · branch · years · paygrade subtitle.
+      expect(
+        screen.getByText(/Staff Sergeant · U\.S\. Army · 8 years of service · E-6/i),
+      ).toBeInTheDocument()
       // MOS chips — 88M also appears in the role card's "best_mos" line.
       expect(screen.getAllByText(/88M/).length).toBeGreaterThan(0)
       expect(screen.getByText(/92Y/)).toBeInTheDocument()
@@ -275,6 +280,37 @@ describe('TranslatePage', () => {
       expect(screen.getByText('95%')).toBeInTheDocument()
       // Attribution to best MOS
       expect(screen.getByText(/Best match via your/i)).toBeInTheDocument()
+    })
+  })
+
+  it('falls back to rank + branch header when the name is not extracted', async () => {
+    const user = userEvent.setup()
+
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce({ ok: true, json: async () => mockMosCodes } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          ...mockDD214Response,
+          profile: { ...mockDD214Response.profile, name: '' },
+        }),
+      } as Response)
+
+    renderPage()
+    await user.click(screen.getByRole('tab', { name: /UPLOAD MY DD-214/i }))
+
+    const fileInput = document.getElementById('dd214-file') as HTMLInputElement
+    const pdf = new File(['%PDF-1.4\n'], 'my-dd214.pdf', { type: 'application/pdf' })
+    await user.upload(fileInput, pdf)
+    await user.click(screen.getByRole('button', { name: /Analyze with AI/i }))
+
+    await waitFor(() => {
+      // Falls back to the rank + branch composite title.
+      expect(screen.getByText('STAFF SERGEANT, ARMY')).toBeInTheDocument()
+      // Subtitle line is only rendered when we have a name, so it should NOT be there.
+      expect(
+        screen.queryByText(/U\.S\. Army · 8 years of service · E-6/i),
+      ).not.toBeInTheDocument()
     })
   })
 

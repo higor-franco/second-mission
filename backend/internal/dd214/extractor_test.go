@@ -11,6 +11,7 @@ import (
 
 func TestParseProfile_CleanJSON(t *testing.T) {
 	raw := `{
+		"name": "John A. Doe",
 		"primary_mos": {"code": "88m", "title": "Motor Transport Operator"},
 		"secondary_mos": [{"code": "92y", "title": "Unit Supply Specialist"}],
 		"additional_skills": ["Air Assault", "5K"],
@@ -28,6 +29,9 @@ func TestParseProfile_CleanJSON(t *testing.T) {
 		t.Fatalf("parseProfile returned error: %v", err)
 	}
 
+	if p.Name != "John A. Doe" {
+		t.Errorf("name mismatch: got %q", p.Name)
+	}
 	if p.PrimaryMOS.Code != "88M" {
 		t.Errorf("primary MOS code should be uppercased: got %q", p.PrimaryMOS.Code)
 	}

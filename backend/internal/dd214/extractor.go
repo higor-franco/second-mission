@@ -43,6 +43,12 @@ import (
 // notably, a missing PrimaryMOS.Code means the matcher has no deterministic
 // O*NET crosswalk to start from and should fall back to the skill signals.
 type ExtractedProfile struct {
+	// Name is the veteran's full name as written on the form (typically
+	// "LAST, FIRST MIDDLE" in Block 1). Extracted to make the match
+	// experience feel personal. Never persisted — lives only in the
+	// response and is released when the request returns.
+	Name string `json:"name"`
+
 	// PrimaryMOS is the veteran's primary military occupational specialty
 	// (Block 11 on the form).
 	PrimaryMOS MOSEntry `json:"primary_mos"`
@@ -141,6 +147,7 @@ Read the attached DD-214 document and extract the fields below into a single val
 
 Schema:
 {
+  "name":                "string",
   "primary_mos":         { "code": "string", "title": "string" },
   "secondary_mos":       [ { "code": "string", "title": "string" } ],
   "additional_skills":   [ "string" ],
@@ -154,6 +161,7 @@ Schema:
 }
 
 Field guide (reference the DD-214 block numbers shown on the form):
+- name: Block 1 — the veteran's full name. Preserve the form's capitalization if natural (e.g. "JOHN A. DOE"); if the form uses "LAST, FIRST MIDDLE" you may normalize to "First Middle Last" for presentation. Empty string if illegible.
 - primary_mos: Block 11 — Primary Specialty. Extract the short code (e.g. "88M", "91B", "0311") into "code" and the title into "title". If the form uses a title without a code, leave "code" as "".
 - secondary_mos: any additional MOS / rate / AFSC entries found in Block 11, duty assignments, or remarks. Exclude the primary entry.
 - additional_skills: ASI, SQI, or other skill identifiers (examples: "5K", "V", "B4", "Airborne", "Air Assault", "Ranger Tab"). Keep them short.
