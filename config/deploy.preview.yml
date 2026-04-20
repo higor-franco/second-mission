@@ -13,6 +13,7 @@ env:
     - SMTP_USER
     - SMTP_PASSWORD
     - SMTP_FROM
+    - ANTHROPIC_API_KEY
 
 proxy:
   hosts:
