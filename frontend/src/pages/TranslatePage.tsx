@@ -217,9 +217,9 @@ export default function TranslatePage() {
               role="tab"
               aria-selected={mode === 'mos'}
               onClick={() => switchMode('mos')}
-              className={`flex-1 px-5 py-4 font-heading text-sm tracking-[0.2em] transition-all cursor-pointer ${
+              className={`flex-1 px-6 py-5 font-heading text-lg md:text-xl tracking-[0.15em] transition-all cursor-pointer ${
                 mode === 'mos'
-                  ? 'bg-[var(--navy)] text-white'
+                  ? 'bg-[var(--navy)] text-white shadow-inner'
                   : 'bg-[var(--cream)] text-[var(--navy)] hover:bg-[var(--sand)]'
               }`}
             >
@@ -229,9 +229,9 @@ export default function TranslatePage() {
               role="tab"
               aria-selected={mode === 'dd214'}
               onClick={() => switchMode('dd214')}
-              className={`flex-1 px-5 py-4 font-heading text-sm tracking-[0.2em] transition-all cursor-pointer ${
+              className={`flex-1 px-6 py-5 font-heading text-lg md:text-xl tracking-[0.15em] transition-all cursor-pointer ${
                 mode === 'dd214'
-                  ? 'bg-[var(--navy)] text-white'
+                  ? 'bg-[var(--navy)] text-white shadow-inner'
                   : 'bg-[var(--cream)] text-[var(--navy)] hover:bg-[var(--sand)]'
               }`}
             >
@@ -243,7 +243,7 @@ export default function TranslatePage() {
             {mode === 'mos' ? (
               <div className="flex flex-col sm:flex-row gap-4">
                 <div className="flex-1">
-                  <label htmlFor="mos-select" className="block text-xs font-semibold tracking-wider text-[var(--muted-foreground)] mb-2">
+                  <label htmlFor="mos-select" className="block text-sm font-semibold tracking-wider text-[var(--navy)] mb-2">
                     SELECT YOUR MOS CODE
                   </label>
                   <select
@@ -287,7 +287,7 @@ export default function TranslatePage() {
               </div>
             ) : (
               <div>
-                <label className="block text-xs font-semibold tracking-wider text-[var(--muted-foreground)] mb-2">
+                <label className="block text-sm font-semibold tracking-wider text-[var(--navy)] mb-2">
                   UPLOAD YOUR DD FORM 214 (PDF, MAX 10 MB)
                 </label>
                 <div className="flex flex-col sm:flex-row gap-4">
