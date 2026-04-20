@@ -112,11 +112,29 @@ WHERE jl.employer_id = $1 AND va.status != 'matched'
 ORDER BY
     CASE va.status
         WHEN 'placed' THEN 1
-        WHEN 'interviewing' THEN 2
-        WHEN 'introduced' THEN 3
-        WHEN 'interested' THEN 4
+        WHEN 'contract_signed' THEN 2
+        WHEN 'proposal_sent' THEN 3
+        WHEN 'interviewing' THEN 4
+        WHEN 'introduced' THEN 5
+        WHEN 'interested' THEN 6
     END,
     va.match_score DESC;
+
+-- name: ListCandidatesForListing :many
+-- Employer-facing candidate list for a single job listing, used by the
+-- per-listing funnel view. Includes every applicant status except `matched`
+-- (that's the pre-application system-generated match pool; veterans appear
+-- here once they've at least expressed interest).
+SELECT
+    va.id AS application_id, va.status, va.match_score, va.created_at AS applied_at,
+    va.updated_at,
+    v.id AS veteran_id, v.name, v.mos_code, v.rank, v.years_of_service,
+    v.separation_date, v.location AS veteran_location, v.journey_step
+FROM veteran_applications va
+JOIN veterans v ON v.id = va.veteran_id
+JOIN job_listings jl ON jl.id = va.job_listing_id
+WHERE jl.id = $1 AND jl.employer_id = $2 AND va.status != 'matched'
+ORDER BY va.match_score DESC, va.created_at DESC;
 
 -- name: UpdateEmployerPassword :exec
 UPDATE employers SET password_hash = $2, updated_at = NOW()

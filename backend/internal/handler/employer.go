@@ -635,6 +635,114 @@ func (h *EmployerHandler) GetJobListing(w http.ResponseWriter, r *http.Request) 
 	})
 }
 
+// GET /api/employer/listings/{id}/candidates
+// Returns the listing and every candidate who has at least expressed
+// interest (status != 'matched') so the detail page can render both the
+// listing summary and the hiring funnel in a single request.
+func (h *EmployerHandler) GetJobListingWithCandidates(w http.ResponseWriter, r *http.Request) {
+	session, ok := GetSession(r)
+	if !ok || session.UserType != "employer" {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "not authenticated as employer"})
+		return
+	}
+
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 32)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid listing id"})
+		return
+	}
+
+	employerID := pgtype.Int4{Int32: session.UserID, Valid: true}
+
+	// First fetch the listing so we can 404 cleanly when the id either
+	// doesn't exist or belongs to a different employer.
+	listingRow, err := h.queries.GetEmployerJobListing(r.Context(), sqlc.GetEmployerJobListingParams{
+		ID:         int32(id),
+		EmployerID: employerID,
+	})
+	if err != nil {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "listing not found"})
+		return
+	}
+
+	rows, err := h.queries.ListCandidatesForListing(r.Context(), sqlc.ListCandidatesForListingParams{
+		ID:         int32(id),
+		EmployerID: employerID,
+	})
+	if err != nil {
+		slog.Error("failed to list candidates for listing", "listing_id", id, "err", err)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "internal server error"})
+		return
+	}
+
+	type listingCandidate struct {
+		ApplicationID   int32  `json:"application_id"`
+		Status          string `json:"status"`
+		MatchScore      int32  `json:"match_score"`
+		AppliedAt       string `json:"applied_at"`
+		UpdatedAt       string `json:"updated_at"`
+		VeteranID       int32  `json:"veteran_id"`
+		Name            string `json:"name"`
+		MosCode         string `json:"mos_code"`
+		Rank            string `json:"rank"`
+		YearsOfService  int32  `json:"years_of_service"`
+		SeparationDate  string `json:"separation_date"`
+		VeteranLocation string `json:"veteran_location"`
+		JourneyStep     string `json:"journey_step"`
+	}
+
+	candidates := make([]listingCandidate, len(rows))
+	for i, row := range rows {
+		mosCode := ""
+		if row.MosCode.Valid {
+			mosCode = row.MosCode.String
+		}
+		sepDate := ""
+		if row.SeparationDate.Valid {
+			sepDate = row.SeparationDate.Time.Format("2006-01-02")
+		}
+		candidates[i] = listingCandidate{
+			ApplicationID:   row.ApplicationID,
+			Status:          row.Status,
+			MatchScore:      row.MatchScore,
+			AppliedAt:       formatTimestamptz(row.AppliedAt),
+			UpdatedAt:       formatTimestamptz(row.UpdatedAt),
+			VeteranID:       row.VeteranID,
+			Name:            row.Name,
+			MosCode:         mosCode,
+			Rank:            row.Rank,
+			YearsOfService:  row.YearsOfService,
+			SeparationDate:  sepDate,
+			VeteranLocation: row.VeteranLocation,
+			JourneyStep:     row.JourneyStep,
+		}
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"listing": jobListingResponse{
+			ID:                listingRow.ID,
+			Title:             listingRow.Title,
+			Description:       listingRow.Description,
+			Requirements:      nullableSlice(listingRow.Requirements),
+			Location:          listingRow.Location,
+			SalaryMin:         listingRow.SalaryMin,
+			SalaryMax:         listingRow.SalaryMax,
+			EmploymentType:    listingRow.EmploymentType,
+			WotcEligible:      listingRow.WotcEligible,
+			IsActive:          listingRow.IsActive,
+			PostedAt:          formatTimestamptz(listingRow.PostedAt),
+			Tasks:             nullableSlice(listingRow.Tasks),
+			Benefits:          nullableSlice(listingRow.Benefits),
+			MosCodesPreferred: nullableSlice(listingRow.MosCodesPreferred),
+			OnetCode:          listingRow.OnetCode,
+			RoleTitle:         listingRow.RoleTitle,
+			Sector:            listingRow.Sector,
+			CivilianRoleID:    listingRow.CivilianRoleID,
+		},
+		"candidates": candidates,
+	})
+}
+
 type createJobListingRequest struct {
 	CivilianRoleID    int32    `json:"civilian_role_id"`
 	Title             string   `json:"title"`
@@ -923,8 +1031,16 @@ func (h *EmployerHandler) UpdateCandidateStatus(w http.ResponseWriter, r *http.R
 		return
 	}
 
+	// The funnel extends the pipeline with two new stages between
+	// interviewing and placed: proposal_sent (offer extended) and
+	// contract_signed (signed, awaiting start).
 	validStatuses := map[string]bool{
-		"interested": true, "introduced": true, "interviewing": true, "placed": true,
+		"interested":      true,
+		"introduced":      true,
+		"interviewing":    true,
+		"proposal_sent":   true,
+		"contract_signed": true,
+		"placed":          true,
 	}
 	if !validStatuses[req.Status] {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid status"})

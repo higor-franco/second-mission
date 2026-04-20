@@ -87,6 +87,26 @@ The core product is an AI-powered skills translation engine that maps military M
   - WOTC eligibility flag
 - Request introductions to candidates
 
+**F6a: Listing Detail View**
+- Every listing on the dashboard is clickable, opening a dedicated detail page at `/employer/listings/:id`
+- The detail page shows the full listing as the employer posted it (description, key tasks, requirements, benefits, preferred MOS codes, WOTC flag) so the employer can review exactly what veterans see
+- Quick actions at the top: **Pause / Activate & Relist** (toggles `is_active`) and **Edit Listing** (opens the edit form at `/employer/listings/:id/edit`)
+- The edit form mirrors the new-listing form but pre-fills from the existing listing. The civilian role category is shown read-only — changing it would invalidate existing match scores; employers wanting a different category pause and post a new listing instead
+
+**F6b: Per-Listing Hiring Funnel**
+- Each listing's detail page displays a 5-stage Kanban funnel: **Match → Interview → Proposal → Contract → End**
+- Bucket semantics:
+  | Column | Backend statuses | Meaning |
+  |---|---|---|
+  | Match | `matched`, `interested` | System-matched pool + veterans who expressed interest |
+  | Interview | `introduced`, `interviewing` | Employer introduced + actively interviewing |
+  | Proposal | `proposal_sent` | Offer extended to candidate |
+  | Contract | `contract_signed` | Contract signed, awaiting start date |
+  | End | `placed` | Hired — placement complete |
+- Each candidate card shows: name, MOS, rank, match score (with hybrid-score colour coding), status label within the bucket, and a one-click button to advance to the next stage (`Introduce → Move to Interview → Extend Offer → Sign Contract → Mark Placed`)
+- Data is scoped to that listing only — candidates from other listings do not appear
+- Cross-employer isolation: the backend returns 404 when an employer requests another company's listing, preventing candidate leak between companies
+
 **F7: WOTC Facilitation**
 - Automatic WOTC eligibility flagging on veteran profiles
 - Employer-facing documentation guidance for claiming credits

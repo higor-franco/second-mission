@@ -15,6 +15,8 @@ import EmployerForgotPasswordPage from '@/pages/EmployerForgotPasswordPage'
 import EmployerResetPasswordPage from '@/pages/EmployerResetPasswordPage'
 import EmployerDashboardPage from '@/pages/EmployerDashboardPage'
 import EmployerNewListingPage from '@/pages/EmployerNewListingPage'
+import EmployerListingDetailPage from '@/pages/EmployerListingDetailPage'
+import EmployerEditListingPage from '@/pages/EmployerEditListingPage'
 import EmployerProfilePage from '@/pages/EmployerProfilePage'
 import AdminLoginPage from '@/pages/AdminLoginPage'
 import AdminDashboardPage from '@/pages/AdminDashboardPage'
@@ -52,6 +54,12 @@ function App() {
           } />
           <Route path="/employer/listings/new" element={
             <EmployerAuthProvider><EmployerNewListingPage /></EmployerAuthProvider>
+          } />
+          <Route path="/employer/listings/:id" element={
+            <EmployerAuthProvider><EmployerListingDetailPage /></EmployerAuthProvider>
+          } />
+          <Route path="/employer/listings/:id/edit" element={
+            <EmployerAuthProvider><EmployerEditListingPage /></EmployerAuthProvider>
           } />
           <Route path="/employer/profile" element={
             <EmployerAuthProvider><EmployerProfilePage /></EmployerAuthProvider>

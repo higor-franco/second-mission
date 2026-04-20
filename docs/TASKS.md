@@ -30,6 +30,7 @@
 | Role posting (task-level descriptions) | Done | /employer/listings/new — create listings with civilian role category, task-level descriptions, requirements, benefits, salary, MOS preferences, WOTC flag |
 | Introduction requests | Done | Employer can advance candidate status: interested → introduced → interviewing → placed via dashboard |
 | Employer forgot/reset password | Done | POST /api/employer/forgot-password + POST /api/employer/reset-password, reuses magic_tokens table, SMTP email with 15-min expiry, frontend pages with full flow |
+| Employer listing detail + edit/relist + per-listing hiring funnel | Done | New routes `/employer/listings/:id` (detail with 5-stage Kanban funnel) and `/employer/listings/:id/edit` (edit form). New endpoint `GET /api/employer/listings/:id/candidates` returns `{ listing, candidates }` in one call; returns 404 for cross-employer access. Migration 011 extends `veteran_applications.status` with `proposal_sent` and `contract_signed`. Funnel buckets: match (matched+interested), interview (introduced+interviewing), proposal, contract, end (placed). Employer advance chain: Introduce → Move to Interview → Extend Offer → Sign Contract → Mark Placed. Dashboard listing rows are now clickable links. 4 new backend tests (empty funnel, cross-employer 404, full 5-stage chain, invalid status rejected) + 6 new frontend tests for ListingDetailPage. |
 
 ## Phase 3 — Platform Intelligence
 

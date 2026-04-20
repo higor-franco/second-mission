@@ -535,8 +535,19 @@ func (h *VeteranHandler) UpdateApplicationStatus(w http.ResponseWriter, r *http.
 		return
 	}
 
+	// Kept in sync with the DB check constraint in
+	// migrations/011_funnel_statuses.sql. The veteran UI only drives a subset
+	// (matched/interested), but any status the DB accepts must pass this
+	// whitelist, otherwise the funnel's post-interview stages would appear
+	// invalid if a veteran-side edit ever reached one of them.
 	validStatuses := map[string]bool{
-		"matched": true, "interested": true, "introduced": true, "interviewing": true, "placed": true,
+		"matched":         true,
+		"interested":      true,
+		"introduced":      true,
+		"interviewing":    true,
+		"proposal_sent":   true,
+		"contract_signed": true,
+		"placed":          true,
 	}
 	if !validStatuses[req.Status] {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid status"})

@@ -125,6 +125,7 @@ func main() {
 	mux.Handle("GET /api/employer/dashboard", handler.RequireAuth(queries, employerHandler.Dashboard))
 	mux.Handle("GET /api/employer/listings", handler.RequireAuth(queries, employerHandler.ListJobListings))
 	mux.Handle("GET /api/employer/listings/{id}", handler.RequireAuth(queries, employerHandler.GetJobListing))
+	mux.Handle("GET /api/employer/listings/{id}/candidates", handler.RequireAuth(queries, employerHandler.GetJobListingWithCandidates))
 	mux.Handle("POST /api/employer/listings", handler.RequireAuth(queries, employerHandler.CreateJobListing))
 	mux.Handle("PUT /api/employer/listings/{id}", handler.RequireAuth(queries, employerHandler.UpdateJobListing))
 	mux.Handle("POST /api/employer/listings/{id}/toggle", handler.RequireAuth(queries, employerHandler.ToggleJobListing))

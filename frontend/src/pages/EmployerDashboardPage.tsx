@@ -52,21 +52,36 @@ function formatSalary(n: number) {
 
 function statusColor(status: string) {
   switch (status) {
-    case 'interested': return 'bg-blue-100 text-blue-800'
-    case 'introduced': return 'bg-amber-100 text-amber-800'
-    case 'interviewing': return 'bg-purple-100 text-purple-800'
-    case 'placed': return 'bg-green-100 text-green-800'
-    default: return 'bg-gray-100 text-gray-800'
+    case 'interested':      return 'bg-blue-100 text-blue-800'
+    case 'introduced':      return 'bg-amber-100 text-amber-800'
+    case 'interviewing':    return 'bg-purple-100 text-purple-800'
+    case 'proposal_sent':   return 'bg-indigo-100 text-indigo-800'
+    case 'contract_signed': return 'bg-teal-100 text-teal-800'
+    case 'placed':          return 'bg-green-100 text-green-800'
+    default:                return 'bg-gray-100 text-gray-800'
   }
 }
 
 function statusIcon(status: string) {
   switch (status) {
-    case 'interested': return '📩'
-    case 'introduced': return '🤝'
-    case 'interviewing': return '💬'
-    case 'placed': return '🎉'
-    default: return '📋'
+    case 'interested':      return '📩'
+    case 'introduced':      return '🤝'
+    case 'interviewing':    return '💬'
+    case 'proposal_sent':   return '📄'
+    case 'contract_signed': return '🖋️'
+    case 'placed':          return '🎉'
+    default:                return '📋'
+  }
+}
+
+// Human-friendly label for the new multi-word statuses. The existing ones
+// uppercased fine on their own; the compound statuses get a dedicated map
+// so the dashboard shows "Offer Sent" instead of "PROPOSAL_SENT".
+function statusLabel(status: string) {
+  switch (status) {
+    case 'proposal_sent':   return 'OFFER SENT'
+    case 'contract_signed': return 'CONTRACT SIGNED'
+    default:                return status.toUpperCase()
   }
 }
 
@@ -142,16 +157,24 @@ export default function EmployerDashboardPage() {
     setUpdatingId(null)
   }
 
+  // Full forward progression across the 7-state backend pipeline. Two new
+  // stages (proposal_sent, contract_signed) sit between interviewing and
+  // placed to match the employer funnel (match → interview → proposal →
+  // contract → end).
   const nextStatus: Record<string, string> = {
-    interested: 'introduced',
-    introduced: 'interviewing',
-    interviewing: 'placed',
+    interested:      'introduced',
+    introduced:      'interviewing',
+    interviewing:    'proposal_sent',
+    proposal_sent:   'contract_signed',
+    contract_signed: 'placed',
   }
 
   const nextStatusLabel: Record<string, string> = {
-    interested: 'Introduce',
-    introduced: 'Move to Interview',
-    interviewing: 'Mark Placed',
+    interested:      'Introduce',
+    introduced:      'Move to Interview',
+    interviewing:    'Extend Offer',
+    proposal_sent:   'Sign Contract',
+    contract_signed: 'Mark Placed',
   }
 
   return (
@@ -264,12 +287,20 @@ export default function EmployerDashboardPage() {
                 ) : (
                   <div className="space-y-3">
                     {listings.map(listing => (
+                      // A parent `<div>` wraps the card so the Pause/Activate
+                      // toggle can stay interactive without being nested
+                      // inside an `<a>` (which would be invalid HTML and
+                      // also swallow its click). Only the content block is
+                      // wrapped in the Link.
                       <div
                         key={listing.id}
                         className="bg-white border border-[var(--sand-dark)] rounded-sm p-5 hover:border-[var(--gold)] hover:shadow-sm transition-all"
                       >
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-3">
+                          <Link
+                            to={`/employer/listings/${listing.id}`}
+                            className="flex-1 min-w-0 no-underline cursor-pointer group"
+                          >
                             <div className="flex items-center gap-2 mb-1">
                               <span className={`inline-block w-2 h-2 rounded-full ${listing.is_active ? 'bg-green-500' : 'bg-gray-400'}`} />
                               <span className="text-xs font-semibold tracking-wider text-[var(--muted-foreground)]">
@@ -281,7 +312,9 @@ export default function EmployerDashboardPage() {
                                 </span>
                               )}
                             </div>
-                            <h3 className="font-heading text-lg tracking-wider text-[var(--navy)] truncate">{listing.title}</h3>
+                            <h3 className="font-heading text-lg tracking-wider text-[var(--navy)] truncate group-hover:text-[var(--gold-dark)] transition-colors">
+                              {listing.title}
+                            </h3>
                             <div className="flex items-center gap-3 mt-1 text-xs text-[var(--muted-foreground)]">
                               <span>{listing.sector}</span>
                               <span>·</span>
@@ -289,11 +322,14 @@ export default function EmployerDashboardPage() {
                               <span>·</span>
                               <span>{formatSalary(listing.salary_min)}–{formatSalary(listing.salary_max)}</span>
                             </div>
-                          </div>
+                            <div className="text-xs text-[var(--muted-foreground)]/80 mt-1 group-hover:text-[var(--navy)] transition-colors">
+                              View details & funnel →
+                            </div>
+                          </Link>
                           <button
                             onClick={() => toggleListing(listing.id)}
                             disabled={togglingId === listing.id}
-                            className={`ml-3 text-xs font-semibold px-3 py-1.5 rounded-sm transition-colors cursor-pointer border ${
+                            className={`ml-3 self-start text-xs font-semibold px-3 py-1.5 rounded-sm transition-colors cursor-pointer border ${
                               listing.is_active
                                 ? 'border-[var(--sand-dark)] text-[var(--muted-foreground)] hover:border-red-300 hover:text-red-600'
                                 : 'border-green-300 text-green-700 hover:bg-green-50'
@@ -370,7 +406,7 @@ export default function EmployerDashboardPage() {
                         <div className="flex items-center gap-2 mb-3">
                           <span className="text-sm">{statusIcon(candidate.status)}</span>
                           <span className={`text-xs font-semibold tracking-wider px-2 py-0.5 rounded-sm ${statusColor(candidate.status)}`}>
-                            {candidate.status.toUpperCase()}
+                            {statusLabel(candidate.status)}
                           </span>
                           <span className="text-xs text-[var(--muted-foreground)]">
                             for {candidate.job_title}
