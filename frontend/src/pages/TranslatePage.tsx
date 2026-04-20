@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
-import Header from '@/components/Header'
+import { Link, Navigate } from 'react-router-dom'
+import { useAuth } from '@/lib/auth'
 import Footer from '@/components/Footer'
 
 interface MOSCode {
@@ -88,6 +89,7 @@ function getScoreLabel(score: number): string {
 type Mode = 'mos' | 'dd214'
 
 export default function TranslatePage() {
+  const { veteran, loading: authLoading, logout } = useAuth()
   const [mode, setMode] = useState<Mode>('mos')
 
   // Shared
@@ -104,12 +106,28 @@ export default function TranslatePage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [dd214Result, setDD214Result] = useState<DD214Response | null>(null)
 
+  // Fetch MOS codes only after we know the veteran is authenticated, since
+  // the endpoint is gated. Firing the request before auth resolves would
+  // either race with the auth check or surface a 401 as a user-visible
+  // "Failed to load MOS codes" toast.
   useEffect(() => {
-    fetch('/api/mos-codes')
+    if (authLoading || !veteran) return
+
+    fetch('/api/mos-codes', { credentials: 'include' })
       .then(res => res.json())
       .then(setMosCodes)
       .catch(() => setError('Failed to load MOS codes'))
-  }, [])
+  }, [authLoading, veteran])
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-[var(--cream)] flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-[var(--navy)] border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  if (!veteran) return <Navigate to="/login" replace />
 
   async function handleTranslate() {
     if (!selectedMOS) return
@@ -119,7 +137,9 @@ export default function TranslatePage() {
     setDD214Result(null)
 
     try {
-      const res = await fetch(`/api/translate?mos=${encodeURIComponent(selectedMOS)}`)
+      const res = await fetch(`/api/translate?mos=${encodeURIComponent(selectedMOS)}`, {
+        credentials: 'include',
+      })
       if (!res.ok) {
         const data = await res.json()
         throw new Error(data.error || 'Translation failed')
@@ -166,6 +186,7 @@ export default function TranslatePage() {
       const res = await fetch('/api/dd214/translate', {
         method: 'POST',
         body: form,
+        credentials: 'include',
       })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
@@ -188,10 +209,44 @@ export default function TranslatePage() {
 
   return (
     <div className="min-h-screen bg-[var(--cream)]">
-      <Header />
+      {/* Signed-in veteran nav — matches Dashboard/Opportunities/Applications. */}
+      <header className="bg-[var(--navy)] text-white sticky top-0 z-10">
+        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+          <Link to="/" className="flex items-center gap-3 no-underline cursor-pointer">
+            <img src="/logo.png" alt="Second Mission" className="h-10 w-auto brightness-0 invert" />
+            <span className="font-heading text-2xl tracking-wider text-white leading-none hidden sm:block">
+              SECOND MISSION
+            </span>
+          </Link>
+          <nav className="flex items-center gap-6">
+            <Link to="/dashboard" className="text-sm font-medium text-[var(--sand)] hover:text-white transition-colors no-underline cursor-pointer">
+              Dashboard
+            </Link>
+            <Link to="/translate" className="text-sm font-medium text-white border-b-2 border-[var(--gold)] pb-0.5 no-underline cursor-pointer">
+              Translate
+            </Link>
+            <Link to="/opportunities" className="text-sm font-medium text-[var(--sand)] hover:text-white transition-colors no-underline cursor-pointer">
+              Opportunities
+            </Link>
+            <Link to="/applications" className="text-sm font-medium text-[var(--sand)] hover:text-white transition-colors no-underline cursor-pointer">
+              My Pipeline
+            </Link>
+            <Link to="/profile" className="text-sm font-medium text-[var(--sand)] hover:text-white transition-colors no-underline cursor-pointer">
+              Profile
+            </Link>
+            <button
+              onClick={logout}
+              className="text-sm font-medium text-[var(--sand-dark)] hover:text-white transition-colors cursor-pointer bg-transparent border-none"
+            >
+              Sign Out
+            </button>
+          </nav>
+        </div>
+      </header>
 
-      {/* Hero */}
-      <section className="pt-32 pb-16 bg-[var(--navy)] relative overflow-hidden">
+      {/* Hero — padding sized for an in-flow (non-fixed) sticky nav, unlike
+         the public Header which used fixed positioning and needed pt-32. */}
+      <section className="pt-16 pb-16 bg-[var(--navy)] relative overflow-hidden">
         <div className="absolute inset-0 opacity-5">
           <div className="absolute top-1/4 left-1/3 w-96 h-96 bg-[var(--gold)] rounded-full blur-[150px]" />
         </div>

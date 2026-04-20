@@ -89,11 +89,6 @@ func main() {
 		w.Write([]byte("ok"))
 	})
 
-	// Public API routes
-	mux.HandleFunc("GET /api/translate", mosHandler.Translate)
-	mux.HandleFunc("GET /api/mos-codes", mosHandler.ListMOSCodes)
-	mux.HandleFunc("POST /api/dd214/translate", dd214Handler.Translate)
-
 	// Auth routes
 	mux.HandleFunc("POST /auth/magic-link", authHandler.SendMagicLink)
 	mux.HandleFunc("GET /auth/verify", authHandler.VerifyToken)
@@ -101,6 +96,13 @@ func main() {
 	mux.Handle("GET /api/auth/me", handler.RequireAuth(queries, authHandler.Me))
 
 	// Protected veteran routes
+	// Translator + DD-214 translate preview are gated behind login so the
+	// first reveal of the "wow" engine happens after the veteran has signed
+	// up. This is the platform's conversion point — we lead with narrative
+	// on the public landing page and reveal the tool to signed-in veterans.
+	mux.Handle("GET /api/translate", handler.RequireAuth(queries, mosHandler.Translate))
+	mux.Handle("GET /api/mos-codes", handler.RequireAuth(queries, mosHandler.ListMOSCodes))
+	mux.Handle("POST /api/dd214/translate", handler.RequireAuth(queries, dd214Handler.Translate))
 	mux.Handle("PUT /api/veteran/profile", handler.RequireAuth(queries, veteranHandler.UpdateProfile))
 	mux.Handle("POST /api/veteran/dd214/import", handler.RequireAuth(queries, dd214Handler.Import))
 	mux.Handle("GET /api/veteran/matches", handler.RequireAuth(queries, veteranHandler.Matches))

@@ -32,9 +32,9 @@ The core product is an AI-powered skills translation engine that maps military M
 - Four-step veteran journey (Discover → Translate → Match → Place) with visual flow
 - Salary benchmarks for matched industrial roles ($68K+ average)
 - Role cards showing real career paths (wind turbine tech, logistics coordinator, maintenance lead, safety officer)
-- Clear call-to-action to try the MOS translator or sign up
+- Single primary call-to-action that routes veterans to sign-in (the translator itself is now behind login)
 
-**F2: MOS Skills Translation Engine**
+**F2: MOS Skills Translation Engine (login-required)**
 - Veteran enters their MOS code (e.g., 88M, 91B, 92Y, 12B, 68W)
 - Engine returns matched civilian roles with:
   - Role title and description
@@ -43,11 +43,11 @@ The core product is an AI-powered skills translation engine that maps military M
   - Key transferable skills
   - Industry sector
 - Seed data from O*NET Military Crosswalk (real SOC code mappings)
-- Available without sign-up (the "wow" moment that drives registration)
+- **Access:** the translator and the DD-214 upload tab live behind veteran login. The public landing page promises the capability; the tool itself is the first thing the veteran sees after signing in. Supporting endpoints (`GET /api/translate`, `GET /api/mos-codes`, `POST /api/dd214/translate`) require a veteran session — unauthenticated requests return 401.
 
 **F2b: DD Form 214 Upload (AI Extraction)**
 - Alternative entry path for veterans who'd rather not look up their MOS code(s) manually
-- Veteran uploads their DD-214 PDF on the same `/translate` page (tabbed UI: "I know my MOS" vs "Upload my DD-214")
+- Veteran uploads their DD-214 PDF on the same `/translate` page (tabbed UI: "I know my MOS" vs "Upload my DD-214"). `/translate` is login-protected — the upload UI is not available on the public site.
 - Claude (Opus 4.7) reads the full form and extracts a structured profile: primary MOS, secondary MOS codes, ASI/SQI, rank, paygrade, years of service, military education, decorations, branch
 - The platform aggregates civilian role matches across every MOS on the form, keeping the best match per role and unioning transferable skills
 - Results show the extracted profile summary, the list of MOS codes recognized in the crosswalk, and the aggregated role matches (each tagged with the MOS that produced the strongest match)

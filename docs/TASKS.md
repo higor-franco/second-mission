@@ -17,6 +17,7 @@
 | Veteran opportunities page (matched job listings) | Done | GET /api/veteran/opportunities, sector filters, WOTC badge, Express Interest |
 | Application / pipeline tracking | Done | POST /api/veteran/applications, GET /api/veteran/applications, status pipeline |
 | Journey step tracking | Done | Auto-advances through discover→translate→match→place based on activity, real-time UI updates via auth context |
+| Gate translator + DD-214 upload behind veteran login | Done | `/translate` is now a protected route — unauthenticated visitors redirect to `/login`. Backend endpoints `GET /api/translate`, `GET /api/mos-codes`, and `POST /api/dd214/translate` moved behind `RequireAuth` (return 401 without a session). Landing page CTAs repointed from `/translate` to `/login`; public `Header` drops the "Translate Your MOS" link; signed-in veteran pages (Dashboard, Opportunities, Applications, Profile, Translate) share a nav bar that includes "Translate". TranslatePage now uses the signed-in navy nav header. Tests: added a redirect-when-unauthenticated test; existing tests updated to mock a logged-in veteran. PRD F2/F2b updated. |
 
 ## Phase 2 — Employer Experience
 

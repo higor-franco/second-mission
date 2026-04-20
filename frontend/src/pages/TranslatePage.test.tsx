@@ -1,17 +1,46 @@
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import TranslatePage from './TranslatePage'
 
-// Mock auth context used by Header
+// Mock auth context. Swappable at the test level via `setMockAuth` below
+// so we can cover both authenticated and unauthenticated rendering — the
+// page is now a protected route and should redirect anonymous visitors.
+type MockAuthState = {
+  veteran: { id: number; email: string; name: string; mos_code: string; rank: string; years_of_service: number; separation_date: string; location: string; preferred_sectors: string[]; profile_complete: boolean; journey_step: string } | null
+  loading: boolean
+}
+
+let mockAuthState: MockAuthState = {
+  veteran: {
+    id: 1,
+    email: 'vet@example.com',
+    name: 'Test Veteran',
+    mos_code: '88M',
+    rank: 'E-5',
+    years_of_service: 6,
+    separation_date: '2024-06-30',
+    location: 'Killeen, TX',
+    preferred_sectors: ['Logistics'],
+    profile_complete: true,
+    journey_step: 'translate',
+  },
+  loading: false,
+}
+
+function setMockAuth(next: MockAuthState) {
+  mockAuthState = next
+}
+
 vi.mock('@/lib/auth', () => ({
   useAuth: () => ({
-    veteran: null,
-    loading: false,
+    veteran: mockAuthState.veteran,
+    loading: mockAuthState.loading,
     login: vi.fn(),
     logout: vi.fn(),
     refresh: vi.fn(),
+    updateVeteran: vi.fn(),
   }),
   AuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))
@@ -49,8 +78,11 @@ const mockTranslateResponse = {
 
 function renderPage() {
   return render(
-    <MemoryRouter>
-      <TranslatePage />
+    <MemoryRouter initialEntries={['/translate']}>
+      <Routes>
+        <Route path="/translate" element={<TranslatePage />} />
+        <Route path="/login" element={<div>LOGIN_PAGE_MARKER</div>} />
+      </Routes>
     </MemoryRouter>
   )
 }
@@ -58,6 +90,35 @@ function renderPage() {
 describe('TranslatePage', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
+    // Reset to the default "logged in" state; individual tests can override.
+    setMockAuth({
+      veteran: {
+        id: 1,
+        email: 'vet@example.com',
+        name: 'Test Veteran',
+        mos_code: '88M',
+        rank: 'E-5',
+        years_of_service: 6,
+        separation_date: '2024-06-30',
+        location: 'Killeen, TX',
+        preferred_sectors: ['Logistics'],
+        profile_complete: true,
+        journey_step: 'translate',
+      },
+      loading: false,
+    })
+  })
+
+  it('redirects unauthenticated visitors to /login', async () => {
+    setMockAuth({ veteran: null, loading: false })
+    // No fetch mock — if the page fetched MOS codes while unauth'd that would
+    // itself be a bug. The assertion checks we navigated to the login marker.
+
+    renderPage()
+
+    await waitFor(() => {
+      expect(screen.getByText('LOGIN_PAGE_MARKER')).toBeInTheDocument()
+    })
   })
 
   it('renders the page title and MOS selector', async () => {

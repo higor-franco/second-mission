@@ -232,6 +232,12 @@ export default function ProfilePage() {
             >
               Dashboard
             </Link>
+            <Link
+              to="/translate"
+              className="text-sm font-medium text-[var(--sand)] hover:text-white transition-colors no-underline cursor-pointer"
+            >
+              Translate
+            </Link>
             <button
               onClick={logout}
               className="text-sm font-medium text-[var(--sand-dark)] hover:text-white transition-colors cursor-pointer bg-transparent border-none"

@@ -115,6 +115,9 @@ export default function DashboardPage() {
             <Link to="/dashboard" className="text-sm font-medium text-white border-b-2 border-[var(--gold)] pb-0.5 no-underline cursor-pointer">
               Dashboard
             </Link>
+            <Link to="/translate" className="text-sm font-medium text-[var(--sand)] hover:text-white transition-colors no-underline cursor-pointer">
+              Translate
+            </Link>
             <Link to="/opportunities" className="text-sm font-medium text-[var(--sand)] hover:text-white transition-colors no-underline cursor-pointer">
               Opportunities
             </Link>

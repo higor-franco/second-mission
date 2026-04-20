@@ -14,12 +14,6 @@ export default function Header() {
           </span>
         </Link>
         <nav className="flex items-center gap-6">
-          <Link
-            to="/translate"
-            className="text-sm font-semibold text-[var(--navy)] hover:text-[var(--gold-dark)] transition-colors cursor-pointer no-underline"
-          >
-            Translate Your MOS
-          </Link>
           <a
             href="#how-it-works"
             className="text-sm font-medium text-[var(--muted-foreground)] hover:text-[var(--navy)] transition-colors cursor-pointer no-underline hidden md:inline"

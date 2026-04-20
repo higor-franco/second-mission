@@ -166,13 +166,13 @@ export default function LandingPage() {
 
               <div className="animate-fade-in-up flex flex-col sm:flex-row gap-4" style={{ animationDelay: '0.4s' }}>
                 <Link
-                  to="/translate"
+                  to="/login"
                   className="inline-flex items-center justify-center gap-3 bg-[var(--navy)] text-white font-semibold text-lg px-8 py-4 rounded-sm hover:bg-[var(--navy-light)] transition-all hover:translate-y-[-2px] hover:shadow-lg cursor-pointer no-underline"
                 >
                   <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M5 10L9 14L15 6" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
-                  I'm a Veteran
+                  I'm a Veteran — Sign In
                 </Link>
                 <Link
                   to="/employer/register"
@@ -234,10 +234,10 @@ export default function LandingPage() {
 
           <div className="text-center mt-12">
             <Link
-              to="/translate"
+              to="/login"
               className="inline-flex items-center gap-3 bg-[var(--navy)] text-white font-semibold px-8 py-4 rounded-sm hover:bg-[var(--navy-light)] transition-all hover:translate-y-[-2px] hover:shadow-lg cursor-pointer no-underline"
             >
-              Translate Your MOS — It's Free
+              Sign In to Translate Your MOS — It's Free
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M3 8h10M9 4l4 4-4 4" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
@@ -289,10 +289,10 @@ export default function LandingPage() {
 
           <div className="text-center mt-12">
             <Link
-              to="/translate"
+              to="/login"
               className="inline-flex items-center gap-3 bg-[var(--gold)] text-[var(--navy-dark)] font-semibold text-lg px-10 py-4 rounded-sm hover:bg-[var(--gold-light)] transition-all hover:translate-y-[-2px] hover:shadow-lg cursor-pointer no-underline"
             >
-              Find Your Match — Enter Your MOS
+              Sign In to Find Your Match
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M5 10H15M11 6L15 10L11 14" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
@@ -391,10 +391,10 @@ export default function LandingPage() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
-              to="/translate"
+              to="/login"
               className="inline-flex items-center justify-center gap-3 bg-[var(--gold)] text-[var(--navy-dark)] font-semibold text-lg px-10 py-5 rounded-sm hover:bg-[var(--gold-light)] transition-all hover:translate-y-[-2px] hover:shadow-xl cursor-pointer no-underline"
             >
-              Translate Your MOS — Free
+              Veteran Sign In — Free
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M5 10H15M11 6L15 10L11 14" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
