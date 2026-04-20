@@ -102,6 +102,7 @@ func main() {
 
 	// Protected veteran routes
 	mux.Handle("PUT /api/veteran/profile", handler.RequireAuth(queries, veteranHandler.UpdateProfile))
+	mux.Handle("POST /api/veteran/dd214/import", handler.RequireAuth(queries, dd214Handler.Import))
 	mux.Handle("GET /api/veteran/matches", handler.RequireAuth(queries, veteranHandler.Matches))
 	mux.Handle("GET /api/veteran/opportunities", handler.RequireAuth(queries, veteranHandler.Opportunities))
 	mux.Handle("GET /api/veteran/applications", handler.RequireAuth(queries, veteranHandler.Applications))

@@ -254,6 +254,167 @@ func TestDD214_UnknownMOS_StillReturnsProfile(t *testing.T) {
 	}
 }
 
+// ---------- Authenticated import endpoint (/api/veteran/dd214/import) ----------
+
+// makeDD214ImportRequest builds a POST /api/veteran/dd214/import request
+// with a single "file" part, reusing the session cookie returned by the
+// dev-login helper. Returns the recorded response.
+func runImport(t *testing.T, h *handler.DD214Handler, cookie *http.Cookie, body *bytes.Buffer, ct string) *httptest.ResponseRecorder {
+	t.Helper()
+	req := httptest.NewRequest("POST", "/api/veteran/dd214/import", body)
+	req.Header.Set("Content-Type", ct)
+	if cookie != nil {
+		req.AddCookie(cookie)
+	}
+	w := httptest.NewRecorder()
+	wrapped := handler.RequireAuth(testQueries, h.Import)
+	wrapped.ServeHTTP(w, req)
+	return w
+}
+
+func TestDD214Import_RequiresAuth(t *testing.T) {
+	ext := &fakeExtractor{profile: &dd214.ExtractedProfile{
+		PrimaryMOS: dd214.MOSEntry{Code: "88M"},
+	}}
+	h := handler.NewDD214Handler(testQueries, ext)
+
+	body, ct := makeMultipartPDF(t, "dd214.pdf", fakePDF)
+	w := runImport(t, h, nil /* no cookie */, body, ct)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401 without auth, got %d", w.Code)
+	}
+	if ext.called {
+		t.Error("extractor should not be called when request is unauthenticated")
+	}
+}
+
+func TestDD214Import_HappyPath_ReturnsProfileSuggestion(t *testing.T) {
+	cookie := devLoginAndGetCookie(t, "dd214-import-happy@example.com")
+
+	ext := &fakeExtractor{
+		profile: &dd214.ExtractedProfile{
+			Name:             "John A. Doe",
+			PrimaryMOS:       dd214.MOSEntry{Code: "88M", Title: "Motor Transport Operator"},
+			SecondaryMOS:     []dd214.MOSEntry{{Code: "92Y", Title: "Unit Supply Specialist"}},
+			AdditionalSkills: []string{"Air Assault"},
+			Rank:             "Staff Sergeant",
+			Paygrade:         "E-6",
+			YearsOfService:   8,
+			Branch:           "Army",
+			SeparationDate:   "2023-06-15",
+		},
+	}
+	h := handler.NewDD214Handler(testQueries, ext)
+
+	body, ct := makeMultipartPDF(t, "dd214.pdf", fakePDF)
+	w := runImport(t, h, cookie, body, ct)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp struct {
+		Profile struct {
+			Name           string `json:"name"`
+			SeparationDate string `json:"separation_date"`
+		} `json:"profile"`
+		ProfileSuggestion struct {
+			Name             string   `json:"name"`
+			MosCode          string   `json:"mos_code"`
+			Rank             string   `json:"rank"`
+			YearsOfService   int32    `json:"years_of_service"`
+			SeparationDate   string   `json:"separation_date"`
+			Location         string   `json:"location"`
+			PreferredSectors []string `json:"preferred_sectors"`
+		} `json:"profile_suggestion"`
+		Roles []struct {
+			OnetCode   string `json:"onet_code"`
+			MatchScore int    `json:"match_score"`
+		} `json:"roles"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+
+	// Profile suggestion must be shaped exactly like the PUT /api/veteran/profile body.
+	if resp.ProfileSuggestion.Name != "John A. Doe" {
+		t.Errorf("suggestion name: got %q", resp.ProfileSuggestion.Name)
+	}
+	if resp.ProfileSuggestion.MosCode != "88M" {
+		t.Errorf("suggestion mos_code: got %q", resp.ProfileSuggestion.MosCode)
+	}
+	// Rank on the profile form is the paygrade (E-6), not the rank title.
+	if resp.ProfileSuggestion.Rank != "E-6" {
+		t.Errorf("suggestion rank should be paygrade 'E-6', got %q", resp.ProfileSuggestion.Rank)
+	}
+	if resp.ProfileSuggestion.YearsOfService != 8 {
+		t.Errorf("suggestion years: got %d", resp.ProfileSuggestion.YearsOfService)
+	}
+	if resp.ProfileSuggestion.SeparationDate != "2023-06-15" {
+		t.Errorf("suggestion separation_date: got %q", resp.ProfileSuggestion.SeparationDate)
+	}
+	// Location isn't on the DD-214; we want an empty string, not garbage.
+	if resp.ProfileSuggestion.Location != "" {
+		t.Errorf("suggestion location should be empty, got %q", resp.ProfileSuggestion.Location)
+	}
+	// Preferred sectors must be an empty slice (JSON null would break the frontend).
+	if resp.ProfileSuggestion.PreferredSectors == nil {
+		t.Error("suggestion preferred_sectors should be an empty slice, not nil")
+	}
+	if len(resp.ProfileSuggestion.PreferredSectors) != 0 {
+		t.Errorf("suggestion preferred_sectors should be empty, got %v", resp.ProfileSuggestion.PreferredSectors)
+	}
+
+	// Multi-MOS aggregation still happens on this endpoint too.
+	if len(resp.Roles) == 0 {
+		t.Error("expected matched civilian roles in import response")
+	}
+}
+
+func TestDD214Import_RejectsEmployerSession(t *testing.T) {
+	// Employers have a separate auth flow; the import endpoint must not
+	// accept their sessions even if they somehow land on the route.
+	// We fake this by logging in as a veteran, then editing the session
+	// row's user_type — but the simpler proof is: the handler should 403
+	// any non-veteran session. We assert that contract by calling Import
+	// on a freshly-minted veteran cookie and verifying 200, then
+	// mutating the session via the queries package.
+	cookie := devLoginAndGetCookie(t, "dd214-import-employer-guard@example.com")
+
+	// Flip the user_type on this session to "employer" to simulate.
+	_, err := testPool.Exec(context.Background(),
+		"UPDATE sessions SET user_type = 'employer' WHERE id = $1", cookie.Value)
+	if err != nil {
+		t.Fatalf("failed to mutate session: %v", err)
+	}
+
+	ext := &fakeExtractor{profile: &dd214.ExtractedProfile{
+		PrimaryMOS: dd214.MOSEntry{Code: "88M"},
+	}}
+	h := handler.NewDD214Handler(testQueries, ext)
+
+	body, ct := makeMultipartPDF(t, "dd214.pdf", fakePDF)
+	w := runImport(t, h, cookie, body, ct)
+
+	if w.Code != http.StatusForbidden {
+		t.Fatalf("expected 403 for non-veteran session, got %d", w.Code)
+	}
+}
+
+func TestDD214Import_ExtractorFailure(t *testing.T) {
+	cookie := devLoginAndGetCookie(t, "dd214-import-fail@example.com")
+	ext := &fakeExtractor{err: errors.New("claude unavailable")}
+	h := handler.NewDD214Handler(testQueries, ext)
+
+	body, ct := makeMultipartPDF(t, "dd214.pdf", fakePDF)
+	w := runImport(t, h, cookie, body, ct)
+
+	if w.Code != http.StatusBadGateway {
+		t.Fatalf("expected 502 on extractor failure, got %d", w.Code)
+	}
+}
+
 func TestDD214_PDFContentTypeCheck(t *testing.T) {
 	// Explicitly verify: a file with .pdf extension but text content type
 	// is accepted (browsers sometimes send the wrong type).

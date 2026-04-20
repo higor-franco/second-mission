@@ -138,10 +138,151 @@ func (h *DD214Handler) Translate(w http.ResponseWriter, r *http.Request) {
 	// Drop the PDF as soon as we can.
 	pdfBytes = nil
 
+	mosList, roles := h.aggregateMatches(r, profile)
+
+	writeJSON(w, http.StatusOK, dd214Response{
+		Profile: *profile,
+		MOSList: mosList,
+		Roles:   roles,
+	})
+}
+
+// ImportResponse is what the authenticated import endpoint returns.
+// It mirrors the structure of the public translate response but adds
+// profile_suggestion — a convenience mapping of extracted fields onto
+// the shape the /profile form expects. The frontend uses this to
+// pre-fill inputs without having to translate field names itself.
+type importResponse struct {
+	Profile           dd214.ExtractedProfile `json:"profile"`
+	MOSList           []mosInfo              `json:"mos_list"`
+	Roles             []dd214Role            `json:"roles"`
+	ProfileSuggestion profileSuggestion      `json:"profile_suggestion"`
+}
+
+// profileSuggestion is the shape of the /api/veteran/profile PUT body,
+// populated from the extracted DD-214. Fields the form has but the
+// DD-214 doesn't carry (location, preferred_sectors) are left blank for
+// the veteran to fill in.
+type profileSuggestion struct {
+	Name             string   `json:"name"`
+	MosCode          string   `json:"mos_code"`
+	Rank             string   `json:"rank"`
+	YearsOfService   int32    `json:"years_of_service"`
+	SeparationDate   string   `json:"separation_date"`
+	Location         string   `json:"location"`
+	PreferredSectors []string `json:"preferred_sectors"`
+}
+
+// Import handles POST /api/veteran/dd214/import.
+//
+// Authenticated variant of Translate: accepts the same multipart PDF,
+// runs the same extractor, but additionally returns a `profile_suggestion`
+// block shaped like the /api/veteran/profile PUT body so the frontend
+// can pre-fill the profile form in one step. Every successful import is
+// recorded in activity_logs for admin observability. The PDF is still
+// processed in memory and never persisted.
+func (h *DD214Handler) Import(w http.ResponseWriter, r *http.Request) {
+	session, ok := GetSession(r)
+	if !ok {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "not authenticated"})
+		return
+	}
+	// This endpoint is veteran-only. Employers and admins have their own flows.
+	if session.UserType != "veteran" {
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "veterans only"})
+		return
+	}
+
+	if h.extractor == nil {
+		writeJSON(w, http.StatusServiceUnavailable, map[string]string{
+			"error": "DD-214 extraction is not configured on this server",
+		})
+		return
+	}
+
+	r.Body = http.MaxBytesReader(w, r.Body, dd214MaxUploadBytes)
+	if err := r.ParseMultipartForm(dd214MaxUploadBytes); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{
+			"error": "file is too large or not a valid multipart upload (max 10 MB)",
+		})
+		return
+	}
+
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{
+			"error": "file field is required",
+		})
+		return
+	}
+	defer file.Close()
+
+	if !isLikelyPDF(header.Filename, header.Header.Get("Content-Type")) {
+		writeJSON(w, http.StatusBadRequest, map[string]string{
+			"error": "only PDF uploads are supported",
+		})
+		return
+	}
+
+	pdfBytes, err := io.ReadAll(file)
+	if err != nil {
+		slog.Error("dd214: failed to read uploaded file", "err", err)
+		writeJSON(w, http.StatusBadRequest, map[string]string{
+			"error": "could not read uploaded file",
+		})
+		return
+	}
+
+	profile, err := h.extractor.Extract(r.Context(), pdfBytes)
+	if err != nil {
+		slog.Error("dd214: import extraction failed", "err", err, "size", len(pdfBytes))
+		writeJSON(w, http.StatusBadGateway, map[string]string{
+			"error": "we couldn't read your DD-214. Please try a clearer scan or fill the form manually.",
+		})
+		return
+	}
+	pdfBytes = nil
+
+	mosList, roles := h.aggregateMatches(r, profile)
+
+	// Build the profile_suggestion payload. MOS code goes straight through;
+	// rank drops the paygrade (e.g. "E-6") because that's what the form's
+	// rank dropdown uses as its value.
+	suggestion := profileSuggestion{
+		Name:           profile.Name,
+		MosCode:        strings.ToUpper(strings.TrimSpace(profile.PrimaryMOS.Code)),
+		Rank:           strings.TrimSpace(profile.Paygrade),
+		YearsOfService: int32(profile.YearsOfService),
+		SeparationDate: profile.SeparationDate,
+		// Location isn't on the DD-214 (home of record is PII we skip).
+		// Preferred sectors aren't on the form — veteran picks these.
+		Location:         "",
+		PreferredSectors: []string{},
+	}
+
+	// Audit trail — consistent with the rest of the platform.
+	LogActivity(h.queries, r, "veteran", session.UserID, "dd214_import", map[string]any{
+		"mos_codes":         profile.AllMOSCodes(),
+		"years_of_service":  profile.YearsOfService,
+		"role_matches":      len(roles),
+		"had_separation_dt": profile.SeparationDate != "",
+	})
+
+	writeJSON(w, http.StatusOK, importResponse{
+		Profile:           *profile,
+		MOSList:           mosList,
+		Roles:             roles,
+		ProfileSuggestion: suggestion,
+	})
+}
+
+// aggregateMatches extracted from Translate so Import can reuse the exact
+// same aggregation logic without copy-paste. Returns the per-MOS label list
+// and the role list sorted by score desc (truncated to dd214MaxRoleResults).
+func (h *DD214Handler) aggregateMatches(r *http.Request, profile *dd214.ExtractedProfile) ([]mosInfo, []dd214Role) {
 	codes := profile.AllMOSCodes()
 	primaryCode := strings.ToUpper(strings.TrimSpace(profile.PrimaryMOS.Code))
 
-	// 1. Gather MOS info for each code so the UI can label what was found.
 	mosList := make([]mosInfo, 0, len(codes))
 	for _, code := range codes {
 		info := mosInfo{
@@ -155,7 +296,6 @@ func (h *DD214Handler) Translate(w http.ResponseWriter, r *http.Request) {
 			info.Description = mos.Description
 			info.Found = true
 		} else {
-			// Fall back to whatever title the form provided.
 			if code == primaryCode {
 				info.Title = profile.PrimaryMOS.Title
 			} else {
@@ -170,11 +310,6 @@ func (h *DD214Handler) Translate(w http.ResponseWriter, r *http.Request) {
 		mosList = append(mosList, info)
 	}
 
-	// 2. For each known MOS, pull its civilian-role crosswalk and merge by
-	// onet_code, keeping the highest match_score and unioning transferable
-	// skills. That's how the multi-MOS story pays off: a veteran who was
-	// 88M AND 92Y sees roles reachable from either, scored by whichever
-	// path matches best.
 	aggregated := make(map[string]*dd214Role)
 	for _, info := range mosList {
 		if !info.Found {
@@ -209,7 +344,6 @@ func (h *DD214Handler) Translate(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Flatten + sort by score desc, then title.
 	roles := make([]dd214Role, 0, len(aggregated))
 	for _, r := range aggregated {
 		roles = append(roles, *r)
@@ -223,12 +357,7 @@ func (h *DD214Handler) Translate(w http.ResponseWriter, r *http.Request) {
 	if len(roles) > dd214MaxRoleResults {
 		roles = roles[:dd214MaxRoleResults]
 	}
-
-	writeJSON(w, http.StatusOK, dd214Response{
-		Profile: *profile,
-		MOSList: mosList,
-		Roles:   roles,
-	})
+	return mosList, roles
 }
 
 // isLikelyPDF does a cheap file-type check. We accept application/pdf and

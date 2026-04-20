@@ -56,9 +56,12 @@ The core product is an AI-powered skills translation engine that maps military M
 
 **F3: Veteran Registration & Profile**
 - Sign up with email (magic link auth — no passwords)
+- After first login, the veteran lands on a fork: **Upload DD-214** (recommended — AI reads the full service history and pre-fills every form field it can) or **Enter details manually** (classic path — type MOS + a few fields)
+- Either path ends on the same profile form for review and save; AI-imported data is never auto-committed — the veteran reviews and clicks Save
 - Profile fields: name, MOS code, rank, years of service, separation date, location, preferred roles/industries
 - Auto-populated skill matches from translation engine
 - Profile visible to matched employers only
+- Returning veterans with a completed profile skip the fork and land directly on the edit form
 
 **F4: Veteran Dashboard**
 - View matched employer opportunities with match scores

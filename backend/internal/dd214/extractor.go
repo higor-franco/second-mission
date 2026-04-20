@@ -83,6 +83,11 @@ type ExtractedProfile struct {
 
 	// SeparationReason is the type/character of separation if extractable.
 	SeparationReason string `json:"separation_reason"`
+
+	// SeparationDate is the date the veteran separated from active duty
+	// (Block 12b / 12c on the form), in ISO-8601 YYYY-MM-DD format.
+	// Empty string if not present or illegible.
+	SeparationDate string `json:"separation_date"`
 }
 
 // MOSEntry represents a single military occupational specialty reference as
@@ -157,7 +162,8 @@ Schema:
   "military_education":  [ "string" ],
   "decorations":         [ "string" ],
   "branch":              "string",
-  "separation_reason":   "string"
+  "separation_reason":   "string",
+  "separation_date":     "YYYY-MM-DD"
 }
 
 Field guide (reference the DD-214 block numbers shown on the form):
@@ -172,6 +178,7 @@ Field guide (reference the DD-214 block numbers shown on the form):
 - decorations: Block 13 — medals, badges, ribbons, commendations, citations. One string per line item. Include badges (e.g. "Combat Action Badge", "Expert Marksmanship Badge").
 - branch: Army / Marine Corps / Navy / Air Force / Coast Guard / Space Force. Use exactly one of those values if determinable, otherwise "".
 - separation_reason: Block 23 / 28 — the narrative reason if extractable (e.g. "Completion of Required Active Service"). Empty string if not present.
+- separation_date: Block 12b or 12c — the date the veteran separated from active duty. Format strictly as ISO-8601 "YYYY-MM-DD". Convert any format on the form (e.g. "15 JUN 2023", "06/15/2023", "2023 JUN 15") to YYYY-MM-DD. Empty string if not present or illegible.
 
 Rules:
 - Never invent data. If a field is not present or is illegible, return its zero value ("" for strings, [] for arrays, 0 for numbers).
