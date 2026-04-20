@@ -4,6 +4,7 @@ backend/server.exe
 backend/*.exe
 frontend/dist/
 frontend/node_modules/
+e2e/node_modules/
 .venv/
 .env
 .claude/launch.json

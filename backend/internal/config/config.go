@@ -19,6 +19,9 @@ type Config struct {
 
 	// Session secret for signing session IDs
 	SessionSecret string
+
+	// Anthropic API key for DD-214 extraction via Claude
+	AnthropicAPIKey string
 }
 
 func Load() Config {
@@ -45,5 +48,7 @@ func Load() Config {
 		SMTPFrom:     os.Getenv("SMTP_FROM"),
 
 		SessionSecret: os.Getenv("SESSION_SECRET"),
+
+		AnthropicAPIKey: os.Getenv("ANTHROPIC_API_KEY"),
 	}
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 
@@ -25,6 +25,47 @@ interface TranslateResponse {
   roles: TranslatedRole[]
 }
 
+// --- DD-214 upload types ---
+
+interface DD214MOSEntry {
+  code: string
+  title: string
+}
+
+interface DD214Profile {
+  primary_mos: DD214MOSEntry
+  secondary_mos: DD214MOSEntry[]
+  additional_skills: string[]
+  rank: string
+  paygrade: string
+  years_of_service: number
+  military_education: string[]
+  decorations: string[]
+  branch: string
+  separation_reason: string
+}
+
+interface DD214MOSInfo {
+  code: string
+  title: string
+  branch: string
+  description: string
+  primary: boolean
+  found: boolean
+}
+
+interface DD214Role extends TranslatedRole {
+  best_mos: string
+}
+
+interface DD214Response {
+  profile: DD214Profile
+  mos_list: DD214MOSInfo[]
+  roles: DD214Role[]
+}
+
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024 // keep in sync with backend
+
 function formatSalary(amount: number): string {
   return `$${Math.round(amount / 1000)}K`
 }
@@ -43,12 +84,24 @@ function getScoreLabel(score: number): string {
   return 'Moderate Match'
 }
 
+type Mode = 'mos' | 'dd214'
+
 export default function TranslatePage() {
-  const [mosCodes, setMosCodes] = useState<MOSCode[]>([])
-  const [selectedMOS, setSelectedMOS] = useState('')
-  const [result, setResult] = useState<TranslateResponse | null>(null)
+  const [mode, setMode] = useState<Mode>('mos')
+
+  // Shared
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  // Manual MOS state
+  const [mosCodes, setMosCodes] = useState<MOSCode[]>([])
+  const [selectedMOS, setSelectedMOS] = useState('')
+  const [mosResult, setMOSResult] = useState<TranslateResponse | null>(null)
+
+  // DD-214 state
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [dd214Result, setDD214Result] = useState<DD214Response | null>(null)
 
   useEffect(() => {
     fetch('/api/mos-codes')
@@ -61,7 +114,8 @@ export default function TranslatePage() {
     if (!selectedMOS) return
     setLoading(true)
     setError('')
-    setResult(null)
+    setMOSResult(null)
+    setDD214Result(null)
 
     try {
       const res = await fetch(`/api/translate?mos=${encodeURIComponent(selectedMOS)}`)
@@ -70,12 +124,65 @@ export default function TranslatePage() {
         throw new Error(data.error || 'Translation failed')
       }
       const data: TranslateResponse = await res.json()
-      setResult(data)
+      setMOSResult(data)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong')
     } finally {
       setLoading(false)
     }
+  }
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] ?? null
+    setError('')
+    if (!file) {
+      setSelectedFile(null)
+      return
+    }
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
+      setError('Please upload your DD-214 as a PDF.')
+      setSelectedFile(null)
+      return
+    }
+    if (file.size > MAX_UPLOAD_BYTES) {
+      setError('File is too large (max 10 MB).')
+      setSelectedFile(null)
+      return
+    }
+    setSelectedFile(file)
+  }
+
+  async function handleUpload() {
+    if (!selectedFile) return
+    setLoading(true)
+    setError('')
+    setMOSResult(null)
+    setDD214Result(null)
+
+    try {
+      const form = new FormData()
+      form.append('file', selectedFile)
+      const res = await fetch('/api/dd214/translate', {
+        method: 'POST',
+        body: form,
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data.error || `Upload failed (${res.status})`)
+      }
+      const data: DD214Response = await res.json()
+      setDD214Result(data)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Something went wrong')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  function switchMode(next: Mode) {
+    if (next === mode) return
+    setMode(next)
+    setError('')
   }
 
   return (
@@ -95,173 +202,170 @@ export default function TranslatePage() {
             WHAT'S YOUR MOS WORTH?
           </h1>
           <p className="text-lg text-[var(--sand-dark)] max-w-2xl mx-auto leading-relaxed">
-            Enter your Military Occupational Specialty code and see exactly which civilian careers match your real-world skills — with salary data and confidence scores.
+            Enter your Military Occupational Specialty code — or upload your DD Form 214 — and let our AI translate your full military career into civilian opportunities.
           </p>
         </div>
       </section>
 
-      {/* Search Bar */}
+      {/* Tab selector + input panel */}
       <section className="relative -mt-8 z-10 max-w-3xl mx-auto px-6">
-        <div className="bg-white border border-[var(--sand-dark)] rounded-sm shadow-xl p-6">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
-              <label htmlFor="mos-select" className="block text-xs font-semibold tracking-wider text-[var(--muted-foreground)] mb-2">
-                SELECT YOUR MOS CODE
-              </label>
-              <select
-                id="mos-select"
-                value={selectedMOS}
-                onChange={(e) => setSelectedMOS(e.target.value)}
-                className="w-full px-4 py-3 border border-[var(--sand-dark)] rounded-sm bg-[var(--cream)] text-[var(--navy)] font-medium text-lg focus:outline-none focus:ring-2 focus:ring-[var(--navy)] focus:border-transparent cursor-pointer"
-              >
-                <option value="">Choose your MOS...</option>
-                {mosCodes.map(mos => (
-                  <option key={mos.code} value={mos.code}>
-                    {mos.code} — {mos.title}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex items-end">
-              <button
-                onClick={handleTranslate}
-                disabled={!selectedMOS || loading}
-                className="w-full sm:w-auto bg-[var(--navy)] text-white font-semibold px-8 py-3 rounded-sm hover:bg-[var(--navy-light)] transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2"
-              >
-                {loading ? (
-                  <>
-                    <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24" fill="none">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                    </svg>
-                    Translating...
-                  </>
-                ) : (
-                  <>
-                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M4 9L8 13L14 5" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                    Translate
-                  </>
-                )}
-              </button>
-            </div>
+        <div className="bg-white border border-[var(--sand-dark)] rounded-sm shadow-xl overflow-hidden">
+          {/* Tabs */}
+          <div role="tablist" aria-label="Translation input" className="flex border-b border-[var(--sand-dark)]">
+            <button
+              role="tab"
+              aria-selected={mode === 'mos'}
+              onClick={() => switchMode('mos')}
+              className={`flex-1 px-5 py-4 font-heading text-sm tracking-[0.2em] transition-all cursor-pointer ${
+                mode === 'mos'
+                  ? 'bg-[var(--navy)] text-white'
+                  : 'bg-[var(--cream)] text-[var(--navy)] hover:bg-[var(--sand)]'
+              }`}
+            >
+              I KNOW MY MOS
+            </button>
+            <button
+              role="tab"
+              aria-selected={mode === 'dd214'}
+              onClick={() => switchMode('dd214')}
+              className={`flex-1 px-5 py-4 font-heading text-sm tracking-[0.2em] transition-all cursor-pointer ${
+                mode === 'dd214'
+                  ? 'bg-[var(--navy)] text-white'
+                  : 'bg-[var(--cream)] text-[var(--navy)] hover:bg-[var(--sand)]'
+              }`}
+            >
+              UPLOAD MY DD-214
+            </button>
           </div>
-          {error && (
-            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-sm text-red-700 text-sm">
-              {error}
-            </div>
-          )}
+
+          <div className="p-6">
+            {mode === 'mos' ? (
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex-1">
+                  <label htmlFor="mos-select" className="block text-xs font-semibold tracking-wider text-[var(--muted-foreground)] mb-2">
+                    SELECT YOUR MOS CODE
+                  </label>
+                  <select
+                    id="mos-select"
+                    value={selectedMOS}
+                    onChange={(e) => setSelectedMOS(e.target.value)}
+                    className="w-full px-4 py-3 border border-[var(--sand-dark)] rounded-sm bg-[var(--cream)] text-[var(--navy)] font-medium text-lg focus:outline-none focus:ring-2 focus:ring-[var(--navy)] focus:border-transparent cursor-pointer"
+                  >
+                    <option value="">Choose your MOS...</option>
+                    {mosCodes.map(mos => (
+                      <option key={mos.code} value={mos.code}>
+                        {mos.code} — {mos.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex items-end">
+                  <button
+                    onClick={handleTranslate}
+                    disabled={!selectedMOS || loading}
+                    className="w-full sm:w-auto bg-[var(--navy)] text-white font-semibold px-8 py-3 rounded-sm hover:bg-[var(--navy-light)] transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    {loading ? (
+                      <>
+                        <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24" fill="none">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                        </svg>
+                        Translating...
+                      </>
+                    ) : (
+                      <>
+                        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M4 9L8 13L14 5" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                        Translate
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <label className="block text-xs font-semibold tracking-wider text-[var(--muted-foreground)] mb-2">
+                  UPLOAD YOUR DD FORM 214 (PDF, MAX 10 MB)
+                </label>
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <div className="flex-1">
+                    <input
+                      ref={fileInputRef}
+                      id="dd214-file"
+                      type="file"
+                      accept="application/pdf,.pdf"
+                      onChange={handleFileChange}
+                      className="sr-only"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="w-full text-left px-4 py-3 border border-dashed border-[var(--sand-dark)] rounded-sm bg-[var(--cream)] text-[var(--navy)] hover:border-[var(--navy)] transition-all cursor-pointer"
+                    >
+                      {selectedFile ? (
+                        <span className="flex items-center gap-3">
+                          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M4 2h7l3 3v11H4z" strokeLinejoin="round" />
+                            <path d="M11 2v3h3" strokeLinejoin="round" />
+                          </svg>
+                          <span className="font-medium truncate">{selectedFile.name}</span>
+                          <span className="text-xs text-[var(--muted-foreground)] ml-auto">
+                            {(selectedFile.size / 1024).toFixed(0)} KB
+                          </span>
+                        </span>
+                      ) : (
+                        <span className="text-[var(--muted-foreground)]">Choose your DD-214 PDF...</span>
+                      )}
+                    </button>
+                  </div>
+                  <div className="flex items-end">
+                    <button
+                      onClick={handleUpload}
+                      disabled={!selectedFile || loading}
+                      className="w-full sm:w-auto bg-[var(--navy)] text-white font-semibold px-8 py-3 rounded-sm hover:bg-[var(--navy-light)] transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2"
+                    >
+                      {loading ? (
+                        <>
+                          <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24" fill="none">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                          </svg>
+                          Analyzing...
+                        </>
+                      ) : (
+                        <>
+                          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M9 3v12M4 8l5-5 5 5" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                          Analyze with AI
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+                <p className="mt-3 text-xs text-[var(--muted-foreground)] leading-relaxed">
+                  Your DD-214 is analyzed in memory and <strong>never stored</strong>. We only keep the extracted military experience fields to match you with civilian roles.
+                </p>
+              </div>
+            )}
+
+            {error && (
+              <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-sm text-red-700 text-sm">
+                {error}
+              </div>
+            )}
+          </div>
         </div>
       </section>
 
       {/* Results */}
       <section className="py-16 max-w-6xl mx-auto px-6">
-        {result && (
-          <div className="animate-scale-in">
-            {/* MOS Summary */}
-            <div className="mb-10 p-8 bg-[var(--navy)] rounded-sm text-white">
-              <div className="flex items-start justify-between flex-wrap gap-4">
-                <div>
-                  <span className="font-heading text-sm tracking-[0.3em] text-[var(--gold)]">YOUR MOS</span>
-                  <h2 className="font-heading text-4xl md:text-5xl tracking-wide mt-2">
-                    {result.mos.code} — {result.mos.title.toUpperCase()}
-                  </h2>
-                  <p className="text-[var(--sand-dark)] mt-3 max-w-2xl leading-relaxed">
-                    {result.mos.description}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <div className="font-heading text-5xl text-[var(--gold)]">{result.roles.length}</div>
-                  <div className="text-sm text-[var(--sand-dark)]">career matches found</div>
-                </div>
-              </div>
-            </div>
+        {mosResult && <ManualMOSResult result={mosResult} />}
+        {dd214Result && <DD214Result result={dd214Result} />}
 
-            {/* Role Cards */}
-            <div className="space-y-6">
-              {result.roles.map((role, i) => (
-                <div
-                  key={role.onet_code}
-                  className="animate-fade-in-up bg-white border border-[var(--sand-dark)] rounded-sm p-8 hover:border-[var(--gold)] hover:shadow-lg transition-all group"
-                  style={{ animationDelay: `${0.1 * i}s` }}
-                >
-                  <div className="flex flex-col lg:flex-row lg:items-start gap-6">
-                    {/* Match Score */}
-                    <div className="flex-shrink-0 flex flex-col items-center">
-                      <div className="relative w-20 h-20">
-                        <svg className="w-20 h-20 -rotate-90" viewBox="0 0 80 80">
-                          <circle cx="40" cy="40" r="36" fill="none" stroke="var(--sand-dark)" strokeWidth="6" />
-                          <circle
-                            cx="40" cy="40" r="36" fill="none"
-                            stroke={role.match_score >= 90 ? '#10b981' : role.match_score >= 80 ? 'var(--gold)' : '#f59e0b'}
-                            strokeWidth="6"
-                            strokeLinecap="round"
-                            strokeDasharray={`${(role.match_score / 100) * 226} 226`}
-                          />
-                        </svg>
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <span className="font-heading text-2xl text-[var(--navy)]">{role.match_score}%</span>
-                        </div>
-                      </div>
-                      <span className={`mt-2 text-xs font-semibold px-2 py-1 rounded-sm text-white ${getScoreColor(role.match_score)}`}>
-                        {getScoreLabel(role.match_score)}
-                      </span>
-                    </div>
-
-                    {/* Role Details */}
-                    <div className="flex-1">
-                      <div className="flex items-start justify-between flex-wrap gap-3">
-                        <div>
-                          <span className="inline-block text-xs font-semibold tracking-wider text-[var(--gold-dark)] bg-[var(--gold)]/10 px-3 py-1 rounded-sm mb-2">
-                            {role.sector.toUpperCase()}
-                          </span>
-                          <h3 className="font-heading text-2xl md:text-3xl tracking-wider text-[var(--navy)]">
-                            {role.title.toUpperCase()}
-                          </h3>
-                        </div>
-                        <div className="text-right">
-                          <div className="font-heading text-2xl text-[var(--navy)]">
-                            {formatSalary(role.salary_min)} – {formatSalary(role.salary_max)}
-                          </div>
-                          <div className="text-xs text-[var(--muted-foreground)]">annual salary range</div>
-                        </div>
-                      </div>
-
-                      <p className="text-[var(--muted-foreground)] mt-3 leading-relaxed">
-                        {role.description}
-                      </p>
-
-                      {/* Transferable Skills */}
-                      <div className="mt-4">
-                        <span className="text-xs font-semibold tracking-wider text-[var(--navy)] block mb-2">
-                          YOUR TRANSFERABLE SKILLS
-                        </span>
-                        <div className="flex flex-wrap gap-2">
-                          {role.transferable_skills.map(skill => (
-                            <span
-                              key={skill}
-                              className="text-xs bg-[var(--sand)] text-[var(--navy)] px-3 py-1.5 rounded-sm border border-[var(--sand-dark)] font-medium"
-                            >
-                              {skill}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="mt-4 text-xs text-[var(--muted-foreground)]">
-                        O*NET Code: {role.onet_code}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Empty State */}
-        {!result && !loading && (
+        {!mosResult && !dd214Result && !loading && (
           <div className="text-center py-16">
             <div className="inline-flex items-center justify-center w-24 h-24 bg-[var(--sand)] rounded-full mb-6">
               <svg width="40" height="40" viewBox="0 0 40 40" fill="none" stroke="var(--navy)" strokeWidth="1.5">
@@ -270,16 +374,243 @@ export default function TranslatePage() {
               </svg>
             </div>
             <h3 className="font-heading text-3xl text-[var(--navy)] tracking-wide mb-3">
-              SELECT YOUR MOS CODE ABOVE
+              {mode === 'mos' ? 'SELECT YOUR MOS CODE ABOVE' : 'UPLOAD YOUR DD-214 ABOVE'}
             </h3>
             <p className="text-[var(--muted-foreground)] max-w-md mx-auto">
-              Choose your Military Occupational Specialty and we'll show you exactly which civilian careers match your experience.
+              {mode === 'mos'
+                ? "Choose your Military Occupational Specialty and we'll show you exactly which civilian careers match your experience."
+                : 'Our AI will read your form and surface every civilian career your full military experience unlocks — not just one MOS.'}
             </p>
           </div>
         )}
       </section>
 
       <Footer />
+    </div>
+  )
+}
+
+// ---------- Result components ----------
+
+function ManualMOSResult({ result }: { result: TranslateResponse }) {
+  return (
+    <div className="animate-scale-in">
+      {/* MOS Summary */}
+      <div className="mb-10 p-8 bg-[var(--navy)] rounded-sm text-white">
+        <div className="flex items-start justify-between flex-wrap gap-4">
+          <div>
+            <span className="font-heading text-sm tracking-[0.3em] text-[var(--gold)]">YOUR MOS</span>
+            <h2 className="font-heading text-4xl md:text-5xl tracking-wide mt-2">
+              {result.mos.code} — {result.mos.title.toUpperCase()}
+            </h2>
+            <p className="text-[var(--sand-dark)] mt-3 max-w-2xl leading-relaxed">
+              {result.mos.description}
+            </p>
+          </div>
+          <div className="text-right">
+            <div className="font-heading text-5xl text-[var(--gold)]">{result.roles.length}</div>
+            <div className="text-sm text-[var(--sand-dark)]">career matches found</div>
+          </div>
+        </div>
+      </div>
+
+      <RoleCards roles={result.roles} />
+    </div>
+  )
+}
+
+function DD214Result({ result }: { result: DD214Response }) {
+  const { profile, mos_list, roles } = result
+  const anyFound = mos_list.some(m => m.found)
+
+  return (
+    <div className="animate-scale-in space-y-10">
+      {/* Extracted Profile Header */}
+      <div className="p-8 bg-[var(--navy)] rounded-sm text-white">
+        <div className="flex items-start justify-between flex-wrap gap-4 mb-6">
+          <div>
+            <span className="font-heading text-sm tracking-[0.3em] text-[var(--gold)]">EXTRACTED FROM YOUR DD-214</span>
+            <h2 className="font-heading text-3xl md:text-4xl tracking-wide mt-2">
+              {profile.rank
+                ? `${profile.rank.toUpperCase()}${profile.branch ? `, ${profile.branch.toUpperCase()}` : ''}`
+                : 'YOUR MILITARY PROFILE'}
+            </h2>
+            <div className="flex flex-wrap gap-6 mt-4 text-sm text-[var(--sand-dark)]">
+              {profile.paygrade && (
+                <div><span className="text-[var(--gold)] font-semibold">Paygrade:</span> {profile.paygrade}</div>
+              )}
+              {profile.years_of_service > 0 && (
+                <div><span className="text-[var(--gold)] font-semibold">Service:</span> {profile.years_of_service} years</div>
+              )}
+              {profile.separation_reason && (
+                <div><span className="text-[var(--gold)] font-semibold">Separation:</span> {profile.separation_reason}</div>
+              )}
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="font-heading text-5xl text-[var(--gold)]">{roles.length}</div>
+            <div className="text-sm text-[var(--sand-dark)]">career matches found</div>
+          </div>
+        </div>
+
+        {/* MOS chips */}
+        <div className="mt-4">
+          <div className="text-xs font-semibold tracking-wider text-[var(--gold)] mb-2">MILITARY OCCUPATIONAL SPECIALTIES</div>
+          <div className="flex flex-wrap gap-2">
+            {mos_list.length === 0 && (
+              <span className="text-sm text-[var(--sand-dark)]">No MOS codes extracted.</span>
+            )}
+            {mos_list.map(m => (
+              <span
+                key={m.code}
+                className={`text-xs font-medium px-3 py-1.5 rounded-sm border ${
+                  m.primary
+                    ? 'bg-[var(--gold)] text-[var(--navy)] border-[var(--gold)]'
+                    : 'bg-transparent text-white border-[var(--sand-dark)]'
+                }`}
+                title={m.found ? m.description : 'Not in our crosswalk yet'}
+              >
+                {m.primary && <span className="font-bold mr-1">★</span>}
+                {m.code}
+                {m.title && <span className="opacity-80"> — {m.title}</span>}
+                {!m.found && <span className="ml-1 opacity-60">(no mapping)</span>}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* Additional skills, education, decorations — compact */}
+        <ProfileFactRow label="Additional skills & identifiers" items={profile.additional_skills} />
+        <ProfileFactRow label="Military education" items={profile.military_education} />
+        <ProfileFactRow label="Decorations & badges" items={profile.decorations} />
+      </div>
+
+      {/* Role cards */}
+      {roles.length > 0 ? (
+        <RoleCards roles={roles} showBestMOS />
+      ) : (
+        <div className="p-8 bg-white border border-[var(--sand-dark)] rounded-sm text-center">
+          <h3 className="font-heading text-2xl text-[var(--navy)] mb-2">
+            {anyFound ? 'NO STRONG MATCHES YET' : 'WE DON\u2019T HAVE THESE SPECIALTIES IN THE CROSSWALK YET'}
+          </h3>
+          <p className="text-[var(--muted-foreground)] max-w-xl mx-auto leading-relaxed">
+            We extracted your DD-214 successfully, but couldn\u2019t produce civilian role matches for the MOS codes above. Our team is expanding the crosswalk weekly — check back soon, or register so we can notify you.
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ProfileFactRow({ label, items }: { label: string; items: string[] }) {
+  if (!items || items.length === 0) return null
+  return (
+    <div className="mt-5">
+      <div className="text-xs font-semibold tracking-wider text-[var(--gold)] mb-2">{label.toUpperCase()}</div>
+      <div className="flex flex-wrap gap-2">
+        {items.map((item, i) => (
+          <span
+            key={`${label}-${i}`}
+            className="text-xs bg-white/10 text-white px-3 py-1.5 rounded-sm border border-white/20"
+          >
+            {item}
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function RoleCards({
+  roles,
+  showBestMOS = false,
+}: {
+  roles: (TranslatedRole | DD214Role)[]
+  showBestMOS?: boolean
+}) {
+  return (
+    <div className="space-y-6">
+      {roles.map((role, i) => (
+        <div
+          key={role.onet_code}
+          className="animate-fade-in-up bg-white border border-[var(--sand-dark)] rounded-sm p-8 hover:border-[var(--gold)] hover:shadow-lg transition-all group"
+          style={{ animationDelay: `${0.1 * i}s` }}
+        >
+          <div className="flex flex-col lg:flex-row lg:items-start gap-6">
+            {/* Match Score */}
+            <div className="flex-shrink-0 flex flex-col items-center">
+              <div className="relative w-20 h-20">
+                <svg className="w-20 h-20 -rotate-90" viewBox="0 0 80 80">
+                  <circle cx="40" cy="40" r="36" fill="none" stroke="var(--sand-dark)" strokeWidth="6" />
+                  <circle
+                    cx="40" cy="40" r="36" fill="none"
+                    stroke={role.match_score >= 90 ? '#10b981' : role.match_score >= 80 ? 'var(--gold)' : '#f59e0b'}
+                    strokeWidth="6"
+                    strokeLinecap="round"
+                    strokeDasharray={`${(role.match_score / 100) * 226} 226`}
+                  />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="font-heading text-2xl text-[var(--navy)]">{role.match_score}%</span>
+                </div>
+              </div>
+              <span className={`mt-2 text-xs font-semibold px-2 py-1 rounded-sm text-white ${getScoreColor(role.match_score)}`}>
+                {getScoreLabel(role.match_score)}
+              </span>
+            </div>
+
+            {/* Role Details */}
+            <div className="flex-1">
+              <div className="flex items-start justify-between flex-wrap gap-3">
+                <div>
+                  <span className="inline-block text-xs font-semibold tracking-wider text-[var(--gold-dark)] bg-[var(--gold)]/10 px-3 py-1 rounded-sm mb-2">
+                    {role.sector.toUpperCase()}
+                  </span>
+                  <h3 className="font-heading text-2xl md:text-3xl tracking-wider text-[var(--navy)]">
+                    {role.title.toUpperCase()}
+                  </h3>
+                  {showBestMOS && 'best_mos' in role && (
+                    <div className="mt-2 text-xs text-[var(--muted-foreground)]">
+                      Best match via your <strong className="text-[var(--navy)]">{(role as DD214Role).best_mos}</strong> experience
+                    </div>
+                  )}
+                </div>
+                <div className="text-right">
+                  <div className="font-heading text-2xl text-[var(--navy)]">
+                    {formatSalary(role.salary_min)} – {formatSalary(role.salary_max)}
+                  </div>
+                  <div className="text-xs text-[var(--muted-foreground)]">annual salary range</div>
+                </div>
+              </div>
+
+              <p className="text-[var(--muted-foreground)] mt-3 leading-relaxed">
+                {role.description}
+              </p>
+
+              {/* Transferable Skills */}
+              <div className="mt-4">
+                <span className="text-xs font-semibold tracking-wider text-[var(--navy)] block mb-2">
+                  YOUR TRANSFERABLE SKILLS
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  {role.transferable_skills.map(skill => (
+                    <span
+                      key={skill}
+                      className="text-xs bg-[var(--sand)] text-[var(--navy)] px-3 py-1.5 rounded-sm border border-[var(--sand-dark)] font-medium"
+                    >
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-4 text-xs text-[var(--muted-foreground)]">
+                O*NET Code: {role.onet_code}
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
     </div>
   )
 }

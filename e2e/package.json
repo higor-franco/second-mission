@@ -1,0 +1,8 @@
+{
+  "name": "second-mission-e2e",
+  "version": "0.0.0",
+  "private": true,
+  "devDependencies": {
+    "playwright": "^1.48.0"
+  }
+}

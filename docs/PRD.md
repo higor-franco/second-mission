@@ -45,6 +45,15 @@ The core product is an AI-powered skills translation engine that maps military M
 - Seed data from O*NET Military Crosswalk (real SOC code mappings)
 - Available without sign-up (the "wow" moment that drives registration)
 
+**F2b: DD Form 214 Upload (AI Extraction)**
+- Alternative entry path for veterans who'd rather not look up their MOS code(s) manually
+- Veteran uploads their DD-214 PDF on the same `/translate` page (tabbed UI: "I know my MOS" vs "Upload my DD-214")
+- Claude (Opus 4.7) reads the full form and extracts a structured profile: primary MOS, secondary MOS codes, ASI/SQI, rank, paygrade, years of service, military education, decorations, branch
+- The platform aggregates civilian role matches across every MOS on the form, keeping the best match per role and unioning transferable skills
+- Results show the extracted profile summary, the list of MOS codes recognized in the crosswalk, and the aggregated role matches (each tagged with the MOS that produced the strongest match)
+- Privacy: the PDF is processed in memory and never persisted; only the extracted structured fields are kept for the duration of the response. A clear disclaimer is shown next to the upload control.
+- Max 10 MB, PDF only (v1); unsupported MOS codes are surfaced to the user rather than silently dropped
+
 **F3: Veteran Registration & Profile**
 - Sign up with email (magic link auth — no passwords)
 - Profile fields: name, MOS code, rank, years of service, separation date, location, preferred roles/industries

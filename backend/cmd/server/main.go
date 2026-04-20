@@ -14,6 +14,7 @@ import (
 	"github.com/higor-franco/second-mission/backend/internal/config"
 	"github.com/higor-franco/second-mission/backend/internal/database"
 	"github.com/higor-franco/second-mission/backend/internal/database/sqlc"
+	"github.com/higor-franco/second-mission/backend/internal/dd214"
 	"github.com/higor-franco/second-mission/backend/internal/handler"
 )
 
@@ -64,6 +65,22 @@ func main() {
 	employerHandler := handler.NewEmployerHandler(queries, cfg)
 	adminHandler := handler.NewAdminHandler(queries, cfg)
 
+	// DD-214 extractor — only wired when the Anthropic API key is present.
+	// Without the key the endpoint is registered but returns 503.
+	var dd214Extractor handler.Extractor
+	if cfg.AnthropicAPIKey != "" {
+		ext, err := dd214.NewExtractor(cfg.AnthropicAPIKey)
+		if err != nil {
+			slog.Warn("dd214: extractor unavailable", "err", err)
+		} else {
+			dd214Extractor = ext
+			slog.Info("dd214: extractor configured")
+		}
+	} else {
+		slog.Warn("dd214: ANTHROPIC_API_KEY not set — upload endpoint will return 503")
+	}
+	dd214Handler := handler.NewDD214Handler(queries, dd214Extractor)
+
 	mux := http.NewServeMux()
 
 	// Health check
@@ -75,6 +92,7 @@ func main() {
 	// Public API routes
 	mux.HandleFunc("GET /api/translate", mosHandler.Translate)
 	mux.HandleFunc("GET /api/mos-codes", mosHandler.ListMOSCodes)
+	mux.HandleFunc("POST /api/dd214/translate", dd214Handler.Translate)
 
 	// Auth routes
 	mux.HandleFunc("POST /auth/magic-link", authHandler.SendMagicLink)
