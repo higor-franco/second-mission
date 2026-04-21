@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
+import LandingFAQ from '@/components/LandingFAQ'
 
 const steps = [
   {
@@ -373,6 +374,10 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* FAQ — placed before the final CTA so visitors get their
+         doubts answered right where they'd otherwise bounce. */}
+      <LandingFAQ />
 
       {/* CTA Section */}
       <section className="py-24 bg-[var(--navy)] relative overflow-hidden">

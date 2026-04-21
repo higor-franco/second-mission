@@ -32,6 +32,12 @@ export default function Header() {
           >
             For Employers
           </a>
+          <a
+            href="#faq"
+            className="text-sm font-medium text-[var(--muted-foreground)] hover:text-[var(--navy)] transition-colors cursor-pointer no-underline hidden md:inline"
+          >
+            FAQ
+          </a>
           {!loading && (
             veteran ? (
               <Link
