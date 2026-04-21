@@ -116,14 +116,16 @@ const FAQS: FAQ[] = [
       <>
         <strong>Free during the current beta.</strong> Post listings,
         browse candidates, move hires through the funnel — no card, no
-        subscription. When we exit beta, pricing will have two
-        components: a <strong>monthly subscription</strong> for pipeline
-        access (browse matched candidates, see match scores, reach out)
-        and a <strong>per-hire placement fee</strong> when a veteran you
-        sourced through us accepts an offer. The per-hire fee is
-        structured to be offset by the WOTC tax credit — most employers
-        are net positive from the first placement. Beta participants
-        will get ample notice and early-adopter terms.
+        subscription. When we exit beta, pricing is a single per-hire
+        model: <strong>15% of first-year base salary</strong> when a
+        veteran you sourced through us accepts an offer, invoiced on
+        start date. On a typical <strong>$75,000</strong> placement
+        that's about <strong>$11,250</strong>, and the{' '}
+        <strong>$2,400–$9,600 WOTC tax credit</strong> we facilitate for
+        you offsets most of it — often leaving employers net positive on
+        the first hire. No subscription, no monthly retainer. Beta
+        participants will get ample notice and early-adopter terms
+        before anything turns on.
       </>
     ),
   },

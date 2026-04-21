@@ -87,6 +87,15 @@ The core product is an AI-powered skills translation engine that maps military M
   - WOTC eligibility flag
 - Request introductions to candidates
 
+**F6-JI: Bulk Job Import (careers page or pasted text)**
+- On the employer dashboard, a new "Bulk import jobs" panel lets an employer paste (a) a public careers-page URL or (b) the raw text of one or more job listings, and Claude Opus 4.7 extracts a list of structured job drafts — title, description, requirements, tasks, benefits, location, salary band, employment type, WOTC flag, inferred MOS preferences, and a matched `civilian_role_id` from the platform's catalog.
+- Endpoint: `POST /api/employer/jobs/import` (employer-authenticated). Accepts `{url, text}`. Tries URL fetch first; on HTTP 4xx/5xx/login-wall, transparently falls through to the pasted text if supplied. Nothing is persisted server-side — drafts live only in the response body.
+- SSRF hardening: the fetcher validates URLs up front and again at dial time, rejecting private / loopback / link-local / metadata-service IPs even across DNS rebinding.
+- Review UI: each extracted draft renders as an editable card on the dashboard panel — title, location, salary, civilian-role dropdown, expandable description / tasks / MOS editors. Per-card **Publish** posts to the existing `POST /api/employer/listings` endpoint (same code path as hand-typed listings); a **Publish all** button iterates sequentially. Civilian role is required before publish; when Claude isn't confident enough to pick one (`civilian_role_id=null`), the employer picks from the dropdown.
+- Guardrails: `civilian_role_id` returned by Claude is validated against the actual catalog in the handler — hallucinated IDs get nulled before the drafts are returned. Hard cap of 20 drafts per call.
+- Activity logging: records `jobs_bulk_import` with `{source, url, count}` — never the body text or extracted descriptions.
+- Graceful degradation: endpoint registers regardless of ANTHROPIC_API_KEY presence; without the key it returns 503 with a clear message. Matches the DD-214 and LinkedIn import degradation shape.
+
 **F6-PUB: Public Company Profile (veteran-facing)**
 - Every employer has a public profile page at `/companies/:id` that any signed-in veteran can visit.
 - Page content (no veteran matching required to view): company name, sector, headquarters, tagline/description, public links (company website + LinkedIn company page), company size band ("10,001+ employees"), founding year, and the employer's currently-active job listings.

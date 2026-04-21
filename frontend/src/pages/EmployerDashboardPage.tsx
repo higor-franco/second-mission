@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { useEmployerAuth } from '@/lib/employer-auth'
+import JobImportSection from '@/components/JobImportSection'
 
 interface DashboardStats {
   active_listings: number
@@ -94,9 +95,10 @@ export default function EmployerDashboardPage() {
   const [togglingId, setTogglingId] = useState<number | null>(null)
   const [updatingId, setUpdatingId] = useState<number | null>(null)
 
-  useEffect(() => {
-    if (!employer) return
-
+  // Refresh holds all three dashboard fetches in one place so bulk-
+  // imported listings and the stats they affect (active_listings count)
+  // can update together after a publish without a page reload.
+  const refresh = () => {
     Promise.all([
       fetch('/api/employer/dashboard', { credentials: 'include' }).then(r => r.json()),
       fetch('/api/employer/listings', { credentials: 'include' }).then(r => r.json()),
@@ -107,6 +109,12 @@ export default function EmployerDashboardPage() {
       setCandidates(candidatesData.candidates || [])
     }).catch(() => {})
       .finally(() => setDataLoading(false))
+  }
+
+  useEffect(() => {
+    if (!employer) return
+    refresh()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [employer])
 
   if (loading) {
@@ -256,6 +264,10 @@ export default function EmployerDashboardPage() {
                 </div>
               </div>
             </div>
+
+            {/* Bulk import — sits above the two-column layout so it's
+                the first thing a new employer sees after their stats. */}
+            <JobImportSection onPublished={refresh} />
 
             {/* Two columns: Listings + Candidates */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

@@ -78,10 +78,14 @@ const careers = [
   },
 ]
 
+// Stats bar reflects the problem we solve AND who we solve it for —
+// the 17% figure is the DoD's latest data on women across active-duty
+// separations, added here so the landing page explicitly frames the
+// platform as veteran-wide (not just men) before the visitor scrolls.
 const stats = [
   { value: '73%', label: 'of veterans underemployed in year one' },
   { value: '3.5M', label: 'blue-collar roles unfilled annually' },
-  { value: '$68K+', label: 'average starting salary in matched roles' },
+  { value: '17%', label: 'of transitioning veterans are women — all welcome' },
   { value: '$2,400', label: 'avg. WOTC tax credit per veteran hire' },
 ]
 
@@ -209,8 +213,11 @@ export default function LandingPage() {
             <h2 className="font-heading text-5xl md:text-6xl text-[var(--navy)] mt-4 tracking-wide">
               FOUR STEPS TO YOUR NEW CAREER
             </h2>
-            <p className="text-[var(--muted-foreground)] mt-3 max-w-lg mx-auto">
-              Free for all veterans. Translate your MOS, match with employers, get placed.
+            <p className="text-[var(--muted-foreground)] mt-3 max-w-xl mx-auto">
+              Free for every veteran — men and women of every rank from
+              junior NCOs (<strong>E-4 to E-6</strong>, i.e. Corporal to
+              Staff Sergeant in the Army) to senior enlisted and beyond.
+              Translate your MOS, match with employers, get placed.
             </p>
           </div>
 
@@ -378,6 +385,57 @@ export default function LandingPage() {
       {/* FAQ — placed before the final CTA so visitors get their
          doubts answered right where they'd otherwise bounce. */}
       <LandingFAQ />
+
+      {/* Human-touch / support band — advisor feedback was that a
+          platform serving blue-collar veterans and industrial
+          employers must make clear there are humans behind the AI.
+          Two contact cards, one per audience, sit right above the
+          final CTA so "who do I call if something goes wrong" has an
+          obvious answer before sign-up. */}
+      <section id="support" className="py-16 bg-white border-t border-[var(--sand-dark)]">
+        <div className="max-w-5xl mx-auto px-6">
+          <div className="text-center mb-10">
+            <span className="font-heading text-sm tracking-[0.3em] text-[var(--gold-dark)]">PEOPLE BEHIND THE PLATFORM</span>
+            <h2 className="font-heading text-4xl md:text-5xl text-[var(--navy)] mt-3 tracking-wide">
+              REAL HUMANS, REAL SUPPORT
+            </h2>
+            <p className="text-[var(--muted-foreground)] mt-3 max-w-2xl mx-auto">
+              The AI handles matching and translation. Real people handle
+              introductions, interview prep, funnel coordination, and
+              every awkward moment in between. You're never stuck
+              talking to a bot.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-[var(--cream)] border border-[var(--sand-dark)] rounded-sm p-6">
+              <div className="font-heading text-xs tracking-[0.2em] text-[var(--gold-dark)] mb-1">FOR VETERANS</div>
+              <h3 className="font-heading text-xl tracking-wider text-[var(--navy)] mb-2">Transition support team</h3>
+              <p className="text-sm text-[var(--muted-foreground)] leading-relaxed mb-3">
+                Interview prep, civilian-résumé polish, first-day handoff
+                coordination. If a match feels off, a placement falls
+                through, or you just want a second opinion — email us.
+              </p>
+              <a href="mailto:veterans@secondmission.com" className="text-sm font-semibold text-[var(--navy)] hover:text-[var(--gold-dark)] no-underline cursor-pointer">
+                veterans@secondmission.com
+              </a>
+            </div>
+
+            <div className="bg-[var(--cream)] border border-[var(--sand-dark)] rounded-sm p-6">
+              <div className="font-heading text-xs tracking-[0.2em] text-[var(--gold-dark)] mb-1">FOR EMPLOYERS</div>
+              <h3 className="font-heading text-xl tracking-wider text-[var(--navy)] mb-2">Partner success team</h3>
+              <p className="text-sm text-[var(--muted-foreground)] leading-relaxed mb-3">
+                Pipeline tuning, WOTC paperwork, SkillBridge onboarding,
+                escalations on stalled candidates. One point of contact,
+                same person every time — not a ticketing queue.
+              </p>
+              <a href="mailto:employers@secondmission.com" className="text-sm font-semibold text-[var(--navy)] hover:text-[var(--gold-dark)] no-underline cursor-pointer">
+                employers@secondmission.com
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* CTA Section */}
       <section className="py-24 bg-[var(--navy)] relative overflow-hidden">

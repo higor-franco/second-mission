@@ -16,6 +16,7 @@ import (
 	"github.com/higor-franco/second-mission/backend/internal/database/sqlc"
 	"github.com/higor-franco/second-mission/backend/internal/dd214"
 	"github.com/higor-franco/second-mission/backend/internal/handler"
+	"github.com/higor-franco/second-mission/backend/internal/jobimport"
 	"github.com/higor-franco/second-mission/backend/internal/linkedin"
 )
 
@@ -101,6 +102,22 @@ func main() {
 	// the handler surfaces a paste-fallback message to the frontend.
 	linkedinHandler := handler.NewLinkedInHandler(queries, linkedinExtractor, linkedin.DefaultFetcher)
 
+	// Bulk job import — same shape as the LinkedIn company-profile path.
+	// Reuses the Anthropic key; 503s gracefully when the key is missing.
+	var jobsExtractor handler.JobsExtractor
+	if cfg.AnthropicAPIKey != "" {
+		ext, err := jobimport.NewExtractor(cfg.AnthropicAPIKey)
+		if err != nil {
+			slog.Warn("jobimport: extractor unavailable", "err", err)
+		} else {
+			jobsExtractor = ext
+			slog.Info("jobimport: extractor configured")
+		}
+	} else {
+		slog.Warn("jobimport: ANTHROPIC_API_KEY not set — bulk import endpoint will return 503")
+	}
+	jobImportHandler := handler.NewJobImportHandler(queries, jobsExtractor, jobimport.DefaultFetcher)
+
 	mux := http.NewServeMux()
 
 	// Health check
@@ -146,6 +163,7 @@ func main() {
 
 	// Protected employer routes
 	mux.Handle("POST /api/employer/linkedin/extract", handler.RequireAuth(queries, linkedinHandler.Extract))
+	mux.Handle("POST /api/employer/jobs/import", handler.RequireAuth(queries, jobImportHandler.Extract))
 	mux.Handle("GET /api/employer/me", handler.RequireAuth(queries, employerHandler.Me))
 	mux.Handle("PUT /api/employer/profile", handler.RequireAuth(queries, employerHandler.UpdateProfile))
 	mux.Handle("GET /api/employer/dashboard", handler.RequireAuth(queries, employerHandler.Dashboard))
