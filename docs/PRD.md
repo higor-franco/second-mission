@@ -87,6 +87,16 @@ The core product is an AI-powered skills translation engine that maps military M
   - WOTC eligibility flag
 - Request introductions to candidates
 
+**F6-LI: LinkedIn Import (employer profile pre-fill)**
+- On `/employer/profile`, employers can optionally paste their LinkedIn company page URL or company About text, and Claude (Opus 4.7) extracts a structured profile (company name, sector, location, description, tagline) that pre-fills the form for review.
+- Two input paths:
+  - **URL**: the backend attempts a polite fetch of the public LinkedIn company page. This works opportunistically — LinkedIn blocks many non-logged-in requests, so the UI surfaces a clear paste fallback when that happens.
+  - **Text paste**: the employer pastes their own About section content. Always works.
+- Access control: the endpoint `POST /api/employer/linkedin/extract` requires an authenticated employer session — only exposed on the post-signup profile edit page. The pre-signup registration form does not offer the import (an unauthenticated extraction endpoint would risk Anthropic-credit abuse).
+- Sector mapping: Claude is constrained to pick exactly one value from the platform's sector enum (Energy & Oil/Gas, Construction, Logistics & Supply Chain, Manufacturing, Field Operations, Maintenance & Repair, Other). If no match, the sector stays blank and the employer chooses.
+- Privacy: input is sent to Claude in memory and never persisted; only the extracted fields are shown on-screen. The employer reviews and clicks Save — nothing auto-commits.
+- Activity logging: each successful import is recorded to `activity_logs` as `linkedin_import` with `{source: "url"|"text", url}`. Pasted text and extracted description are never logged.
+
 **F6a: Listing Detail View**
 - Every listing on the dashboard is clickable, opening a dedicated detail page at `/employer/listings/:id`
 - The detail page shows the full listing as the employer posted it (description, key tasks, requirements, benefits, preferred MOS codes, WOTC flag) so the employer can review exactly what veterans see

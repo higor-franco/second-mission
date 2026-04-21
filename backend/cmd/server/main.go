@@ -16,6 +16,7 @@ import (
 	"github.com/higor-franco/second-mission/backend/internal/database/sqlc"
 	"github.com/higor-franco/second-mission/backend/internal/dd214"
 	"github.com/higor-franco/second-mission/backend/internal/handler"
+	"github.com/higor-franco/second-mission/backend/internal/linkedin"
 )
 
 func main() {
@@ -81,6 +82,25 @@ func main() {
 	}
 	dd214Handler := handler.NewDD214Handler(queries, dd214Extractor)
 
+	// LinkedIn extractor — shares the same API key as the DD-214 path.
+	// Without the key the endpoint is registered but returns 503, matching
+	// the DD-214 handler's degradation shape.
+	var linkedinExtractor handler.LinkedInExtractor
+	if cfg.AnthropicAPIKey != "" {
+		ext, err := linkedin.NewExtractor(cfg.AnthropicAPIKey)
+		if err != nil {
+			slog.Warn("linkedin: extractor unavailable", "err", err)
+		} else {
+			linkedinExtractor = ext
+			slog.Info("linkedin: extractor configured")
+		}
+	} else {
+		slog.Warn("linkedin: ANTHROPIC_API_KEY not set — import endpoint will return 503")
+	}
+	// Fetcher is always on — even in dev. When LinkedIn blocks the call,
+	// the handler surfaces a paste-fallback message to the frontend.
+	linkedinHandler := handler.NewLinkedInHandler(queries, linkedinExtractor, linkedin.DefaultFetcher)
+
 	mux := http.NewServeMux()
 
 	// Health check
@@ -120,6 +140,7 @@ func main() {
 	mux.HandleFunc("GET /api/civilian-roles", employerHandler.ListCivilianRoles)
 
 	// Protected employer routes
+	mux.Handle("POST /api/employer/linkedin/extract", handler.RequireAuth(queries, linkedinHandler.Extract))
 	mux.Handle("GET /api/employer/me", handler.RequireAuth(queries, employerHandler.Me))
 	mux.Handle("PUT /api/employer/profile", handler.RequireAuth(queries, employerHandler.UpdateProfile))
 	mux.Handle("GET /api/employer/dashboard", handler.RequireAuth(queries, employerHandler.Dashboard))

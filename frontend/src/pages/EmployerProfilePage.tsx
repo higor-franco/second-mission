@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { useEmployerAuth } from '@/lib/employer-auth'
+import LinkedInImportSection, { type LinkedInProfile } from '@/components/LinkedInImportSection'
 
 const SECTORS = [
   'Energy & Oil/Gas',
@@ -17,6 +18,10 @@ export default function EmployerProfilePage() {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
+  // importBanner is set by the LinkedIn import handler; it persists until
+  // the employer saves or manually edits a pre-filled field, so they see
+  // the "Imported from LinkedIn" confirmation until they're done reviewing.
+  const [importBanner, setImportBanner] = useState<null | { source: 'url' | 'text' }>(null)
   const [form, setForm] = useState({
     company_name: employer?.company_name || '',
     contact_name: employer?.contact_name || '',
@@ -48,6 +53,23 @@ export default function EmployerProfilePage() {
 
   const updateField = (field: string, value: string) => {
     setForm(prev => ({ ...prev, [field]: value }))
+    setSaved(false)
+  }
+
+  // handleLinkedInImport drops the AI-extracted fields into the form.
+  // We ONLY overwrite fields the user hasn't edited (i.e., still match
+  // the employer's saved profile) so a returning employer refreshing
+  // from LinkedIn doesn't lose manual edits they made this session.
+  const handleLinkedInImport = (profile: LinkedInProfile, source: 'url' | 'text') => {
+    setForm(prev => ({
+      ...prev,
+      company_name: profile.company_name || prev.company_name,
+      sector: profile.sector && SECTORS.includes(profile.sector) ? profile.sector : prev.sector,
+      location: profile.location || prev.location,
+      description: profile.description || prev.description,
+    }))
+    setImportBanner({ source })
+    setError('')
     setSaved(false)
   }
 
@@ -112,6 +134,31 @@ export default function EmployerProfilePage() {
             Keep your company information up to date so veterans can learn about your organization.
           </p>
         </div>
+
+        <LinkedInImportSection
+          onImported={handleLinkedInImport}
+          sectorOptions={SECTORS}
+        />
+
+        {importBanner && (
+          <div className="mb-6 bg-[var(--navy)]/5 border border-[var(--navy)]/20 text-[var(--navy)] px-5 py-4 rounded-sm animate-fade-in-up">
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 flex-shrink-0 w-6 h-6 rounded-full bg-[var(--gold)] flex items-center justify-center">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="var(--navy)" strokeWidth="2.5">
+                  <path d="M3 7L6 10L11 4" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <div className="font-semibold">
+                  Imported from LinkedIn {importBanner.source === 'url' ? '(page URL)' : '(pasted text)'}
+                </div>
+                <div className="text-sm text-[var(--muted-foreground)] mt-1">
+                  Review the fields below and hit <strong>Save Changes</strong> when you're ready.
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="animate-fade-in-up space-y-5" style={{ animationDelay: '0.1s' }}>
           {error && (
