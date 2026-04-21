@@ -184,41 +184,48 @@ func (h *VeteranHandler) Matches(w http.ResponseWriter, r *http.Request) {
 // --- Opportunities & Applications ---
 
 type opportunityResponse struct {
-	ID                 int32                  `json:"id"`
-	Title              string                 `json:"title"`
-	Description        string                 `json:"description"`
-	Requirements       []string               `json:"requirements"`
-	Location           string                 `json:"location"`
-	SalaryMin          int32                  `json:"salary_min"`
-	SalaryMax          int32                  `json:"salary_max"`
-	EmploymentType     string                 `json:"employment_type"`
-	WotcEligible       bool                   `json:"wotc_eligible"`
-	Sector             string                 `json:"sector"`
-	RoleTitle          string                 `json:"role_title"`
-	CompanyName        string                 `json:"company_name"`
-	CompanyLocation    string                 `json:"company_location"`
-	MatchScore         int32                  `json:"match_score"`
-	TransferableSkills []string               `json:"transferable_skills"`
+	ID                 int32                   `json:"id"`
+	Title              string                  `json:"title"`
+	Description        string                  `json:"description"`
+	Requirements       []string                `json:"requirements"`
+	Location           string                  `json:"location"`
+	SalaryMin          int32                   `json:"salary_min"`
+	SalaryMax          int32                   `json:"salary_max"`
+	EmploymentType     string                  `json:"employment_type"`
+	WotcEligible       bool                    `json:"wotc_eligible"`
+	Sector             string                  `json:"sector"`
+	RoleTitle          string                  `json:"role_title"`
+	// EmployerID is the FK the frontend needs to link to the public
+	// company profile at /companies/:id. Zero when the row has no employer
+	// (legacy listings from before 006_employer_auth_and_listings).
+	EmployerID         int32                   `json:"employer_id"`
+	CompanyName        string                  `json:"company_name"`
+	CompanyLocation    string                  `json:"company_location"`
+	MatchScore         int32                   `json:"match_score"`
+	TransferableSkills []string                `json:"transferable_skills"`
 	ScoreBreakdown     *matcher.ScoreBreakdown `json:"score_breakdown,omitempty"`
 }
 
 type applicationResponse struct {
-	ID             int32                  `json:"id"`
-	Status         string                 `json:"status"`
-	MatchScore     int32                  `json:"match_score"`
+	ID             int32                   `json:"id"`
+	Status         string                  `json:"status"`
+	MatchScore     int32                   `json:"match_score"`
 	MatchDetails   *matcher.ScoreBreakdown `json:"match_details,omitempty"`
-	Notes          string                 `json:"notes"`
-	JobListingID   int32                  `json:"job_listing_id"`
-	Title          string                 `json:"title"`
-	Description    string                 `json:"description"`
-	Location       string                 `json:"location"`
-	SalaryMin      int32                  `json:"salary_min"`
-	SalaryMax      int32                  `json:"salary_max"`
-	EmploymentType string                 `json:"employment_type"`
-	WotcEligible   bool                   `json:"wotc_eligible"`
-	Sector         string                 `json:"sector"`
-	RoleTitle      string                 `json:"role_title"`
-	CompanyName    string                 `json:"company_name"`
+	Notes          string                  `json:"notes"`
+	JobListingID   int32                   `json:"job_listing_id"`
+	Title          string                  `json:"title"`
+	Description    string                  `json:"description"`
+	Location       string                  `json:"location"`
+	SalaryMin      int32                   `json:"salary_min"`
+	SalaryMax      int32                   `json:"salary_max"`
+	EmploymentType string                  `json:"employment_type"`
+	WotcEligible   bool                    `json:"wotc_eligible"`
+	Sector         string                  `json:"sector"`
+	RoleTitle      string                  `json:"role_title"`
+	// EmployerID enables the same /companies/:id link from the My Pipeline
+	// page. Zero when the listing predates employer auth.
+	EmployerID  int32  `json:"employer_id"`
+	CompanyName string `json:"company_name"`
 }
 
 // GET /api/veteran/opportunities
@@ -276,6 +283,10 @@ func (h *VeteranHandler) Opportunities(w http.ResponseWriter, r *http.Request) {
 		if row.CompanyLocation.Valid {
 			cl = row.CompanyLocation.String
 		}
+		var employerID int32
+		if row.EmployerID.Valid {
+			employerID = row.EmployerID.Int32
+		}
 
 		// Compute hybrid score
 		listing := matcher.JobListing{
@@ -303,6 +314,7 @@ func (h *VeteranHandler) Opportunities(w http.ResponseWriter, r *http.Request) {
 			WotcEligible:       row.WotcEligible,
 			Sector:             row.Sector,
 			RoleTitle:          row.RoleTitle,
+			EmployerID:         employerID,
 			CompanyName:        cn,
 			CompanyLocation:    cl,
 			MatchScore:         int32(breakdown.HybridScore),
@@ -353,6 +365,10 @@ func (h *VeteranHandler) Applications(w http.ResponseWriter, r *http.Request) {
 		if row.CompanyName.Valid {
 			cn = row.CompanyName.String
 		}
+		var employerID int32
+		if row.EmployerID.Valid {
+			employerID = row.EmployerID.Int32
+		}
 
 		var details *matcher.ScoreBreakdown
 		if len(row.MatchDetails) > 0 {
@@ -378,6 +394,7 @@ func (h *VeteranHandler) Applications(w http.ResponseWriter, r *http.Request) {
 			WotcEligible:   row.WotcEligible,
 			Sector:         row.Sector,
 			RoleTitle:      row.RoleTitle,
+			EmployerID:     employerID,
 			CompanyName:    cn,
 		}
 	}

@@ -13,6 +13,23 @@ const SECTORS = [
   'Other',
 ]
 
+// Company size bands matching LinkedIn's, so an employer copying from their
+// LinkedIn page finds a familiar value in the dropdown. Free-form "Other"
+// is intentionally not here — if LinkedIn's bands don't fit, the employer
+// can leave the field blank and we'll just not render it.
+const COMPANY_SIZE_OPTIONS = [
+  '1–10 employees',
+  '11–50 employees',
+  '51–200 employees',
+  '201–500 employees',
+  '501–1,000 employees',
+  '1,001–5,000 employees',
+  '5,001–10,000 employees',
+  '10,001+ employees',
+]
+
+const CURRENT_YEAR = new Date().getFullYear()
+
 export default function EmployerProfilePage() {
   const { employer, loading, logout, updateEmployer } = useEmployerAuth()
   const [saving, setSaving] = useState(false)
@@ -28,6 +45,13 @@ export default function EmployerProfilePage() {
     sector: employer?.sector || '',
     location: employer?.location || '',
     description: employer?.description || '',
+    website_url: employer?.website_url || '',
+    linkedin_url: employer?.linkedin_url || '',
+    company_size: employer?.company_size || '',
+    // Founded year is stored as a number but edited as a string so we can
+    // show an empty input (rather than "0") when the value hasn't been set
+    // yet. We parse back to int on submit.
+    founded_year: employer?.founded_year ? String(employer.founded_year) : '',
   })
 
   // Re-sync form when employer loads
@@ -38,6 +62,10 @@ export default function EmployerProfilePage() {
       sector: employer.sector,
       location: employer.location,
       description: employer.description,
+      website_url: employer.website_url || '',
+      linkedin_url: employer.linkedin_url || '',
+      company_size: employer.company_size || '',
+      founded_year: employer.founded_year ? String(employer.founded_year) : '',
     })
   }
 
@@ -67,6 +95,12 @@ export default function EmployerProfilePage() {
       sector: profile.sector && SECTORS.includes(profile.sector) ? profile.sector : prev.sector,
       location: profile.location || prev.location,
       description: profile.description || prev.description,
+      website_url: profile.website_url || prev.website_url,
+      company_size:
+        profile.company_size && COMPANY_SIZE_OPTIONS.includes(profile.company_size)
+          ? profile.company_size
+          : prev.company_size,
+      founded_year: profile.founded_year ? String(profile.founded_year) : prev.founded_year,
     }))
     setImportBanner({ source })
     setError('')
@@ -79,10 +113,18 @@ export default function EmployerProfilePage() {
     setSaving(true)
     setSaved(false)
 
+    // Coerce founded_year back to int. Empty string or junk → 0 (meaning
+    // "unknown"). Backend also clamps; this just keeps the payload clean.
+    const yearInt = parseInt(form.founded_year, 10)
+    const payload = {
+      ...form,
+      founded_year: Number.isFinite(yearInt) ? yearInt : 0,
+    }
+
     const res = await fetch('/api/employer/profile', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form),
+      body: JSON.stringify(payload),
       credentials: 'include',
     })
     const data = await res.json()
@@ -131,8 +173,23 @@ export default function EmployerProfilePage() {
         <div className="animate-fade-in-up mb-8">
           <h1 className="font-heading text-4xl text-[var(--navy)] tracking-wide">COMPANY PROFILE</h1>
           <p className="text-[var(--muted-foreground)] mt-2">
-            Keep your company information up to date so veterans can learn about your organization.
+            Keep your company information up to date — veterans can browse your full profile before they apply, so a
+            richer page means better-matched candidates reaching out.
           </p>
+          {employer.id ? (
+            <p className="text-xs text-[var(--muted-foreground)] mt-2">
+              Public view:{' '}
+              <a
+                href={`/companies/${employer.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold text-[var(--navy)] hover:text-[var(--gold-dark)] underline"
+              >
+                /companies/{employer.id}
+              </a>{' '}
+              (opens the same page veterans see).
+            </p>
+          ) : null}
         </div>
 
         <LinkedInImportSection
@@ -167,6 +224,7 @@ export default function EmployerProfilePage() {
             </div>
           )}
 
+          {/* Identity — who the company is */}
           <div>
             <label className="block text-xs font-semibold tracking-wider text-[var(--navy)] mb-1.5">COMPANY NAME *</label>
             <input
@@ -201,7 +259,7 @@ export default function EmployerProfilePage() {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-semibold tracking-wider text-[var(--navy)] mb-1.5">LOCATION</label>
+              <label className="block text-xs font-semibold tracking-wider text-[var(--navy)] mb-1.5">HEADQUARTERS</label>
               <input
                 type="text"
                 value={form.location}
@@ -212,6 +270,7 @@ export default function EmployerProfilePage() {
             </div>
           </div>
 
+          {/* About */}
           <div>
             <label className="block text-xs font-semibold tracking-wider text-[var(--navy)] mb-1.5">COMPANY DESCRIPTION</label>
             <textarea
@@ -221,6 +280,67 @@ export default function EmployerProfilePage() {
               className="w-full px-4 py-3 border border-[var(--sand-dark)] rounded-sm bg-white text-[var(--navy)] focus:outline-none focus:border-[var(--navy)] focus:ring-1 focus:ring-[var(--navy)] transition-colors resize-none"
               placeholder="Tell veterans about your company, culture, and what makes it a great place to work..."
             />
+          </div>
+
+          {/* Public links & company facts — the block the new veteran-
+             facing company profile page depends on. */}
+          <div className="border-t border-[var(--sand-dark)] pt-5 mt-2">
+            <h2 className="font-heading text-base tracking-widest text-[var(--gold-dark)] mb-1">PUBLIC COMPANY INFO</h2>
+            <p className="text-xs text-[var(--muted-foreground)] mb-4 leading-relaxed">
+              Helps veterans research your company before applying. Displayed on your public{' '}
+              <strong>/companies/{employer.id || ':id'}</strong> profile page along with your active listings.
+            </p>
+
+            <div>
+              <label className="block text-xs font-semibold tracking-wider text-[var(--navy)] mb-1.5">COMPANY WEBSITE</label>
+              <input
+                type="url"
+                value={form.website_url}
+                onChange={e => updateField('website_url', e.target.value)}
+                className="w-full px-4 py-3 border border-[var(--sand-dark)] rounded-sm bg-white text-[var(--navy)] focus:outline-none focus:border-[var(--navy)] focus:ring-1 focus:ring-[var(--navy)] transition-colors"
+                placeholder="https://www.example.com"
+              />
+            </div>
+
+            <div className="mt-4">
+              <label className="block text-xs font-semibold tracking-wider text-[var(--navy)] mb-1.5">LINKEDIN COMPANY PAGE</label>
+              <input
+                type="url"
+                value={form.linkedin_url}
+                onChange={e => updateField('linkedin_url', e.target.value)}
+                className="w-full px-4 py-3 border border-[var(--sand-dark)] rounded-sm bg-white text-[var(--navy)] focus:outline-none focus:border-[var(--navy)] focus:ring-1 focus:ring-[var(--navy)] transition-colors"
+                placeholder="https://www.linkedin.com/company/your-company/"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 mt-4">
+              <div>
+                <label className="block text-xs font-semibold tracking-wider text-[var(--navy)] mb-1.5">COMPANY SIZE</label>
+                <select
+                  value={form.company_size}
+                  onChange={e => updateField('company_size', e.target.value)}
+                  className="w-full px-4 py-3 border border-[var(--sand-dark)] rounded-sm bg-white text-[var(--navy)] focus:outline-none focus:border-[var(--navy)] focus:ring-1 focus:ring-[var(--navy)] transition-colors cursor-pointer"
+                >
+                  <option value="">Select size</option>
+                  {COMPANY_SIZE_OPTIONS.map(s => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold tracking-wider text-[var(--navy)] mb-1.5">FOUNDED</label>
+                <input
+                  type="number"
+                  value={form.founded_year}
+                  onChange={e => updateField('founded_year', e.target.value)}
+                  min="1600"
+                  max={CURRENT_YEAR}
+                  step="1"
+                  className="w-full px-4 py-3 border border-[var(--sand-dark)] rounded-sm bg-white text-[var(--navy)] focus:outline-none focus:border-[var(--navy)] focus:ring-1 focus:ring-[var(--navy)] transition-colors"
+                  placeholder="e.g. 1985"
+                />
+              </div>
+            </div>
           </div>
 
           <div className="flex items-center gap-4 pt-2">

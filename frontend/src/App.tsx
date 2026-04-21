@@ -10,6 +10,7 @@ import DashboardPage from '@/pages/DashboardPage'
 import ProfilePage from '@/pages/ProfilePage'
 import OpportunitiesPage from '@/pages/OpportunitiesPage'
 import ApplicationsPage from '@/pages/ApplicationsPage'
+import CompanyProfilePage from '@/pages/CompanyProfilePage'
 import EmployerLoginPage, { EmployerRegisterPage } from '@/pages/EmployerLoginPage'
 import EmployerForgotPasswordPage from '@/pages/EmployerForgotPasswordPage'
 import EmployerResetPasswordPage from '@/pages/EmployerResetPasswordPage'
@@ -35,6 +36,9 @@ function App() {
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/opportunities" element={<OpportunitiesPage />} />
           <Route path="/applications" element={<ApplicationsPage />} />
+          {/* Veteran-facing public company profile. Auth-gated inside the
+              page (veteran session required) — the backend also enforces it. */}
+          <Route path="/companies/:id" element={<CompanyProfilePage />} />
 
           {/* Employer routes */}
           <Route path="/employer/login" element={

@@ -131,6 +131,11 @@ func main() {
 	mux.Handle("POST /api/veteran/applications", handler.RequireAuth(queries, veteranHandler.ExpressInterest))
 	mux.Handle("PUT /api/veteran/applications/{id}", handler.RequireAuth(queries, veteranHandler.UpdateApplicationStatus))
 	mux.Handle("GET /api/veteran/journey", handler.RequireAuth(queries, veteranHandler.Journey))
+	// Public company profile — veteran clicks a company name on any
+	// opportunity or application card and lands on /companies/:id. The
+	// handler is on the employer handler (it owns employer data) but is
+	// exposed under the veteran namespace because it's veteran-gated.
+	mux.Handle("GET /api/veteran/employers/{id}", handler.RequireAuth(queries, employerHandler.PublicCompanyProfile))
 
 	// Employer public routes
 	mux.HandleFunc("POST /api/employer/register", employerHandler.Register)

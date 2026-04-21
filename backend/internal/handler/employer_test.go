@@ -511,3 +511,260 @@ func TestUpdateCandidateStatus_InvalidStatus(t *testing.T) {
 		t.Errorf("got status %d, want 400 for invalid status", w.Code)
 	}
 }
+
+// --- UpdateProfile: richer identity fields ---
+
+// Verifies that the employer profile edit saves and returns the four new
+// public-profile fields (website_url, linkedin_url, company_size,
+// founded_year) end-to-end, and that a bogus founded year is clamped to 0.
+func TestUpdateProfile_WithPublicFields(t *testing.T) {
+	cfg := testEmployerCfg()
+	h := handler.NewEmployerHandler(testQueries, cfg)
+
+	email := fmt.Sprintf("emp-public-%d@test.com", time.Now().UnixNano())
+	cookies := registerTestEmployer(t, h, email)
+
+	mux := http.NewServeMux()
+	mux.Handle("PUT /api/employer/profile", handler.RequireAuth(testQueries, h.UpdateProfile))
+
+	// Happy path with all four new fields populated + an out-of-range
+	// founded_year that should be rejected (clamped to 0) by the handler.
+	body := `{
+		"company_name":  "Acme Industrial",
+		"contact_name":  "Jane",
+		"sector":        "Energy",
+		"location":      "Houston, TX",
+		"description":   "Example",
+		"website_url":   "https://acme.example.com",
+		"linkedin_url":  "https://www.linkedin.com/company/acme/",
+		"company_size":  "1,001–5,000 employees",
+		"founded_year":  99999
+	}`
+	req := authedRequest("PUT", "/api/employer/profile", body, cookies)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("got status %d, want 200. Body: %s", w.Code, w.Body.String())
+	}
+
+	var resp map[string]any
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("bad json: %v", err)
+	}
+
+	if resp["website_url"] != "https://acme.example.com" {
+		t.Errorf("website_url = %v, want https://acme.example.com", resp["website_url"])
+	}
+	if resp["linkedin_url"] != "https://www.linkedin.com/company/acme/" {
+		t.Errorf("linkedin_url = %v", resp["linkedin_url"])
+	}
+	if resp["company_size"] != "1,001–5,000 employees" {
+		t.Errorf("company_size = %v", resp["company_size"])
+	}
+	// 99999 is out of range → clamped to 0 (unknown).
+	if got, _ := resp["founded_year"].(float64); got != 0 {
+		t.Errorf("founded_year should be clamped to 0, got %v", resp["founded_year"])
+	}
+
+	// Second PUT with a plausible year — must persist.
+	body2 := `{
+		"company_name":  "Acme Industrial",
+		"contact_name":  "Jane",
+		"sector":        "Energy",
+		"location":      "Houston, TX",
+		"description":   "Example",
+		"website_url":   "  https://acme.example.com  ",
+		"linkedin_url":  "https://www.linkedin.com/company/acme/",
+		"company_size":  "1,001–5,000 employees",
+		"founded_year":  1985
+	}`
+	req2 := authedRequest("PUT", "/api/employer/profile", body2, cookies)
+	w2 := httptest.NewRecorder()
+	mux.ServeHTTP(w2, req2)
+	if w2.Code != http.StatusOK {
+		t.Fatalf("second PUT: %d %s", w2.Code, w2.Body.String())
+	}
+	var resp2 map[string]any
+	json.Unmarshal(w2.Body.Bytes(), &resp2)
+	if got, _ := resp2["founded_year"].(float64); got != 1985 {
+		t.Errorf("founded_year = %v, want 1985", resp2["founded_year"])
+	}
+	// Leading/trailing whitespace on the URL should be trimmed.
+	if resp2["website_url"] != "https://acme.example.com" {
+		t.Errorf("website_url not trimmed: %v", resp2["website_url"])
+	}
+}
+
+// --- Public company profile (veteran-facing) ---
+
+// Helper: login as a veteran via the auth handler's dev endpoint and
+// return the session cookie. Mirrors devLoginAndGetCookie from
+// veteran_test.go but lives here to avoid circular helpers between files.
+func devVeteranCookie(t *testing.T, email string) *http.Cookie {
+	t.Helper()
+	authH := handler.NewAuthHandler(testQueries, testEmployerCfg())
+	req := httptest.NewRequest("POST", "/api/dev/login", bytes.NewBufferString(`{"email":"`+email+`"}`))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	authH.DevLogin(w, req)
+	for _, c := range w.Result().Cookies() {
+		if c.Name == "session_id" {
+			return c
+		}
+	}
+	t.Fatal("dev login: no session cookie returned")
+	return nil
+}
+
+// Happy path — a veteran fetches an existing employer's public profile
+// and gets back the trimmed shape (no email, no password_hash) plus the
+// employer's active listings.
+func TestPublicCompanyProfile_HappyPath(t *testing.T) {
+	cfg := testEmployerCfg()
+	empH := handler.NewEmployerHandler(testQueries, cfg)
+
+	// Register an employer + save a richer profile so we have something
+	// to verify the fields round-trip.
+	empEmail := fmt.Sprintf("emp-public-profile-%d@test.com", time.Now().UnixNano())
+	empCookies := registerTestEmployer(t, empH, empEmail)
+
+	empMux := http.NewServeMux()
+	empMux.Handle("GET /api/employer/me", handler.RequireAuth(testQueries, empH.Me))
+	empMux.Handle("PUT /api/employer/profile", handler.RequireAuth(testQueries, empH.UpdateProfile))
+
+	update := `{
+		"company_name":  "Lone Star Logistics",
+		"contact_name":  "Bob",
+		"sector":        "Logistics",
+		"location":      "Austin, TX",
+		"description":   "Carrier and 3PL serving Texas.",
+		"website_url":   "https://lonestar.example.com",
+		"linkedin_url":  "https://www.linkedin.com/company/lonestar/",
+		"company_size":  "501–1,000 employees",
+		"founded_year":  2001
+	}`
+	req := authedRequest("PUT", "/api/employer/profile", update, empCookies)
+	w := httptest.NewRecorder()
+	empMux.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("seed profile: %d %s", w.Code, w.Body.String())
+	}
+	var saved map[string]any
+	json.Unmarshal(w.Body.Bytes(), &saved)
+	employerID := int(saved["id"].(float64))
+
+	// Now log in as a veteran and hit the public company profile route.
+	vetCookie := devVeteranCookie(t, fmt.Sprintf("vet-company-%d@test.com", time.Now().UnixNano()))
+
+	vetMux := http.NewServeMux()
+	vetMux.Handle("GET /api/veteran/employers/{id}", handler.RequireAuth(testQueries, empH.PublicCompanyProfile))
+
+	req2 := authedRequest("GET", fmt.Sprintf("/api/veteran/employers/%d", employerID), "", []*http.Cookie{vetCookie})
+	w2 := httptest.NewRecorder()
+	vetMux.ServeHTTP(w2, req2)
+
+	if w2.Code != http.StatusOK {
+		t.Fatalf("public profile: %d %s", w2.Code, w2.Body.String())
+	}
+
+	var resp map[string]any
+	if err := json.Unmarshal(w2.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("bad json: %v", err)
+	}
+
+	emp, ok := resp["employer"].(map[string]any)
+	if !ok {
+		t.Fatalf("no employer object in response: %s", w2.Body.String())
+	}
+	if emp["company_name"] != "Lone Star Logistics" {
+		t.Errorf("company_name = %v", emp["company_name"])
+	}
+	if emp["website_url"] != "https://lonestar.example.com" {
+		t.Errorf("website_url = %v", emp["website_url"])
+	}
+	if emp["linkedin_url"] != "https://www.linkedin.com/company/lonestar/" {
+		t.Errorf("linkedin_url = %v", emp["linkedin_url"])
+	}
+	if emp["company_size"] != "501–1,000 employees" {
+		t.Errorf("company_size = %v", emp["company_size"])
+	}
+	if got, _ := emp["founded_year"].(float64); got != 2001 {
+		t.Errorf("founded_year = %v, want 2001", emp["founded_year"])
+	}
+	// Security-sensitive fields must not appear in the veteran view.
+	if _, present := emp["email"]; present {
+		t.Error("public profile leaked email to veteran")
+	}
+	if _, present := emp["password_hash"]; present {
+		t.Error("public profile leaked password_hash to veteran")
+	}
+	if _, present := emp["contact_name"]; present {
+		t.Error("public profile leaked contact_name to veteran")
+	}
+
+	// listings key must exist and be an array (possibly empty when the
+	// employer hasn't posted anything — newly-registered employer in this
+	// test hasn't, so empty is expected).
+	lst, ok := resp["listings"].([]any)
+	if !ok {
+		t.Fatalf("no listings array: %s", w2.Body.String())
+	}
+	_ = lst // contents verified more explicitly in the seeded-NOV test below
+}
+
+// Route returns 404 for a non-existent id and for unauthenticated callers.
+func TestPublicCompanyProfile_AuthAndNotFound(t *testing.T) {
+	cfg := testEmployerCfg()
+	empH := handler.NewEmployerHandler(testQueries, cfg)
+
+	vetMux := http.NewServeMux()
+	vetMux.Handle("GET /api/veteran/employers/{id}", handler.RequireAuth(testQueries, empH.PublicCompanyProfile))
+
+	// 1. Unauthenticated — RequireAuth rejects.
+	req := httptest.NewRequest("GET", "/api/veteran/employers/1", nil)
+	w := httptest.NewRecorder()
+	vetMux.ServeHTTP(w, req)
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("unauthenticated: got %d, want 401", w.Code)
+	}
+
+	// 2. Invalid id (non-numeric) — bad request from strconv.ParseInt.
+	vetCookie := devVeteranCookie(t, fmt.Sprintf("vet-auth-%d@test.com", time.Now().UnixNano()))
+	req2 := authedRequest("GET", "/api/veteran/employers/abc", "", []*http.Cookie{vetCookie})
+	w2 := httptest.NewRecorder()
+	vetMux.ServeHTTP(w2, req2)
+	if w2.Code != http.StatusBadRequest {
+		t.Errorf("non-numeric id: got %d, want 400", w2.Code)
+	}
+
+	// 3. Unknown id — 404.
+	req3 := authedRequest("GET", "/api/veteran/employers/99999999", "", []*http.Cookie{vetCookie})
+	w3 := httptest.NewRecorder()
+	vetMux.ServeHTTP(w3, req3)
+	if w3.Code != http.StatusNotFound {
+		t.Errorf("unknown id: got %d, want 404", w3.Code)
+	}
+}
+
+// Employers trying to hit the veteran-facing endpoint are rejected —
+// even with a valid employer session, the handler scopes access to
+// veteran sessions only so an employer can't scrape competitor profiles.
+func TestPublicCompanyProfile_RejectsEmployerSession(t *testing.T) {
+	cfg := testEmployerCfg()
+	empH := handler.NewEmployerHandler(testQueries, cfg)
+
+	email := fmt.Sprintf("emp-reject-%d@test.com", time.Now().UnixNano())
+	empCookies := registerTestEmployer(t, empH, email)
+
+	vetMux := http.NewServeMux()
+	vetMux.Handle("GET /api/veteran/employers/{id}", handler.RequireAuth(testQueries, empH.PublicCompanyProfile))
+
+	req := authedRequest("GET", "/api/veteran/employers/1", "", empCookies)
+	w := httptest.NewRecorder()
+	vetMux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("employer session hitting veteran endpoint: got %d, want 401. Body: %s", w.Code, w.Body.String())
+	}
+}

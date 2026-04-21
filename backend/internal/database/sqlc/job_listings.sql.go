@@ -28,7 +28,7 @@ SELECT
     jl.salary_min, jl.salary_max, jl.employment_type, jl.wotc_eligible,
     jl.is_active, jl.posted_at,
     cr.onet_code, cr.title AS role_title, cr.sector,
-    e.company_name, e.location AS company_location
+    e.id AS employer_id, e.company_name, e.location AS company_location
 FROM job_listings jl
 JOIN civilian_roles cr ON cr.id = jl.civilian_role_id
 LEFT JOIN employers e ON e.id = jl.employer_id
@@ -50,6 +50,7 @@ type GetJobListingRow struct {
 	OnetCode        string             `json:"onet_code"`
 	RoleTitle       string             `json:"role_title"`
 	Sector          string             `json:"sector"`
+	EmployerID      pgtype.Int4        `json:"employer_id"`
 	CompanyName     pgtype.Text        `json:"company_name"`
 	CompanyLocation pgtype.Text        `json:"company_location"`
 }
@@ -72,6 +73,7 @@ func (q *Queries) GetJobListing(ctx context.Context, id int32) (GetJobListingRow
 		&i.OnetCode,
 		&i.RoleTitle,
 		&i.Sector,
+		&i.EmployerID,
 		&i.CompanyName,
 		&i.CompanyLocation,
 	)
@@ -84,7 +86,7 @@ SELECT
     jl.salary_min, jl.salary_max, jl.employment_type, jl.wotc_eligible,
     jl.posted_at, jl.tasks, jl.mos_codes_preferred,
     cr.onet_code, cr.title AS role_title, cr.sector,
-    e.company_name, e.location AS company_location,
+    e.id AS employer_id, e.company_name, e.location AS company_location,
     mcm.match_score, mcm.transferable_skills
 FROM job_listings jl
 JOIN civilian_roles cr ON cr.id = jl.civilian_role_id
@@ -110,6 +112,7 @@ type ListMatchedJobListingsRow struct {
 	OnetCode           string             `json:"onet_code"`
 	RoleTitle          string             `json:"role_title"`
 	Sector             string             `json:"sector"`
+	EmployerID         pgtype.Int4        `json:"employer_id"`
 	CompanyName        pgtype.Text        `json:"company_name"`
 	CompanyLocation    pgtype.Text        `json:"company_location"`
 	MatchScore         int32              `json:"match_score"`
@@ -117,7 +120,9 @@ type ListMatchedJobListingsRow struct {
 }
 
 // Returns active job listings that match a veteran's MOS code, with match scores
-// Includes tasks and mos_codes_preferred for hybrid matching engine
+// Includes tasks and mos_codes_preferred for hybrid matching engine.
+// Exposes the employer id so the frontend can link from an opportunity card
+// to the public company profile at /companies/:id.
 func (q *Queries) ListMatchedJobListings(ctx context.Context, mosCode string) ([]ListMatchedJobListingsRow, error) {
 	rows, err := q.db.Query(ctx, listMatchedJobListings, mosCode)
 	if err != nil {
@@ -143,6 +148,7 @@ func (q *Queries) ListMatchedJobListings(ctx context.Context, mosCode string) ([
 			&i.OnetCode,
 			&i.RoleTitle,
 			&i.Sector,
+			&i.EmployerID,
 			&i.CompanyName,
 			&i.CompanyLocation,
 			&i.MatchScore,

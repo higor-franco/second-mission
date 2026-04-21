@@ -87,6 +87,15 @@ The core product is an AI-powered skills translation engine that maps military M
   - WOTC eligibility flag
 - Request introductions to candidates
 
+**F6-PUB: Public Company Profile (veteran-facing)**
+- Every employer has a public profile page at `/companies/:id` that any signed-in veteran can visit.
+- Page content (no veteran matching required to view): company name, sector, headquarters, tagline/description, public links (company website + LinkedIn company page), company size band ("10,001+ employees"), founding year, and the employer's currently-active job listings.
+- Access: endpoint `GET /api/veteran/employers/:id` requires a **veteran** session. Employer sessions hitting this endpoint are rejected (prevents an employer from scraping competitor profiles). Deactivated employers (`is_active = false`) return 404.
+- Privacy: the response omits the employer's account email, contact-name, and password hash — only fields the employer has explicitly chosen to make public are returned.
+- Navigation: every company name on the Opportunities cards and the My Pipeline cards becomes a link into the employer's public profile, so the veteran can research the company before expressing interest.
+- Employer-side control: the company profile page at `/employer/profile` is extended with four public-facing fields — **Company website**, **LinkedIn company page**, **Company size** (dropdown, LinkedIn-aligned bands), and **Founded year**. These feed directly into the public profile; a helper link on the edit page lets the employer open the veteran view in a new tab to see exactly what candidates will see. Sector + description already existed and are reused.
+- LinkedIn import extension: the `LinkedInImportSection` interface now optionally returns `website_url`, `company_size`, and `founded_year` so a future extractor upgrade can pre-fill the new fields too; current extractor leaves them blank and the form falls back to manual entry.
+
 **F6-LI: LinkedIn Import (employer profile pre-fill)**
 - On `/employer/profile`, employers can optionally paste their LinkedIn company page URL or company About text, and Claude (Opus 4.7) extracts a structured profile (company name, sector, location, description, tagline) that pre-fills the form for review.
 - Two input paths:
@@ -157,6 +166,13 @@ The core product is an AI-powered skills translation engine that maps military M
 - Accessible (WCAG 2.1 AA)
 - Data privacy: veteran profiles visible only to matched employers
 - Secure authentication via magic link (no passwords)
+
+### Platform Status Disclosure
+
+**Landing page FAQ** carries a top-of-section **beta / proof-of-concept** notice so every visitor understands the current phase before signing up.
+- The first FAQ (open by default) explains that Second Mission is in an open beta while we validate the platform with the Fort Cavazos beachhead cohort and anchor Texas employers, and that **the platform is free for everyone — veterans and employers — during the testing period.**
+- The employer pricing FAQ repeats the commitment ("Free during the current beta") and describes the post-beta pricing model (subscription + per-hire, WOTC offset) so employers still see how monetization is structured long-term.
+- Veterans are never charged, before or after beta.
 
 ### Phase 4 — Admin & Observability
 

@@ -9,6 +9,14 @@ export interface EmployerProfile {
   sector: string
   location: string
   description: string
+  // Public-facing identity fields rendered on /companies/:id and used to
+  // help veterans research the employer. Marked optional so the app still
+  // works if a legacy backend omits them — the new fields were added in
+  // migration 012 and are always present from modern servers.
+  website_url?: string
+  linkedin_url?: string
+  company_size?: string
+  founded_year?: number
   is_active: boolean
 }
 

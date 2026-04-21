@@ -34,6 +34,7 @@ const mockOpportunities = [
     wotc_eligible: true,
     sector: 'Logistics',
     role_title: 'Transportation Manager',
+    employer_id: 1,
     company_name: 'NOV (National Oilwell Varco)',
     company_location: 'Houston, TX',
     match_score: 88,
@@ -61,6 +62,7 @@ const mockOpportunities = [
     wotc_eligible: true,
     sector: 'Logistics',
     role_title: 'Heavy Truck Driver',
+    employer_id: 1,
     company_name: 'NOV (National Oilwell Varco)',
     company_location: 'Houston, TX',
     match_score: 95,
@@ -355,5 +357,30 @@ describe('OpportunitiesPage', () => {
     await screen.findByText('Fleet Operations Manager')
     // Both jobs are in Logistics sector — should all show
     expect(screen.getByText('CDL Driver — Equipment Transport')).toBeInTheDocument()
+  })
+
+  it('links the company name to the public company profile', async () => {
+    mockVeteran = {
+      id: 1,
+      email: 'vet@example.com',
+      name: 'Test Vet',
+      mos_code: '88M',
+      rank: 'E-5',
+      years_of_service: 4,
+      separation_date: '',
+      location: '',
+      preferred_sectors: [],
+      profile_complete: true,
+      journey_step: 'match',
+    }
+    renderPage()
+    await screen.findByText('Fleet Operations Manager')
+
+    // Both mock opportunities share NOV's employer_id=1, so we should
+    // find at least one link pointing at /companies/1 anchored on the
+    // company name.
+    const companyLinks = screen.getAllByRole('link', { name: /NOV \(National Oilwell Varco\)/i })
+    expect(companyLinks.length).toBeGreaterThan(0)
+    expect(companyLinks[0].getAttribute('href')).toBe('/companies/1')
   })
 })

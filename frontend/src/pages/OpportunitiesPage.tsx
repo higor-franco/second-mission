@@ -25,6 +25,11 @@ interface Opportunity {
   wotc_eligible: boolean
   sector: string
   role_title: string
+  // employer_id powers the link from the company name to the public
+  // profile at /companies/:id. Zero means the listing has no employer
+  // attached (legacy seed data) — render the name as plain text in that
+  // case so we don't send the veteran to a 404.
+  employer_id: number
   company_name: string
   company_location: string
   match_score: number
@@ -353,7 +358,16 @@ export default function OpportunitiesPage() {
                             </h3>
 
                             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1 text-sm text-[var(--muted-foreground)]">
-                              <span className="font-semibold text-[var(--navy-light)]">{opp.company_name}</span>
+                              {opp.employer_id ? (
+                                <Link
+                                  to={`/companies/${opp.employer_id}`}
+                                  className="font-semibold text-[var(--navy-light)] hover:text-[var(--gold-dark)] transition-colors no-underline cursor-pointer"
+                                >
+                                  {opp.company_name} →
+                                </Link>
+                              ) : (
+                                <span className="font-semibold text-[var(--navy-light)]">{opp.company_name}</span>
+                              )}
                               <span>📍 {opp.location}</span>
                               <span className="font-heading text-base text-[var(--navy)]">
                                 {formatSalary(opp.salary_min)} – {formatSalary(opp.salary_max)}

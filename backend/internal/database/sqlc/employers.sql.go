@@ -26,10 +26,13 @@ func (q *Queries) CountCandidatesForEmployer(ctx context.Context, employerID pgt
 }
 
 const createEmployer = `-- name: CreateEmployer :one
-INSERT INTO employers (email, company_name, contact_name, sector, location, description, password_hash)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
+INSERT INTO employers (email, company_name, contact_name, sector, location, description,
+                       website_url, linkedin_url, company_size, founded_year, password_hash)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 ON CONFLICT (email) DO NOTHING
-RETURNING id, email, company_name, contact_name, sector, location, description, password_hash, is_active, created_at, updated_at
+RETURNING id, email, company_name, contact_name, sector, location, description,
+          website_url, linkedin_url, company_size, founded_year,
+          password_hash, is_active, created_at, updated_at
 `
 
 type CreateEmployerParams struct {
@@ -39,6 +42,10 @@ type CreateEmployerParams struct {
 	Sector       string `json:"sector"`
 	Location     string `json:"location"`
 	Description  string `json:"description"`
+	WebsiteUrl   string `json:"website_url"`
+	LinkedinUrl  string `json:"linkedin_url"`
+	CompanySize  string `json:"company_size"`
+	FoundedYear  int32  `json:"founded_year"`
 	PasswordHash string `json:"password_hash"`
 }
 
@@ -50,6 +57,10 @@ type CreateEmployerRow struct {
 	Sector       string             `json:"sector"`
 	Location     string             `json:"location"`
 	Description  string             `json:"description"`
+	WebsiteUrl   string             `json:"website_url"`
+	LinkedinUrl  string             `json:"linkedin_url"`
+	CompanySize  string             `json:"company_size"`
+	FoundedYear  int32              `json:"founded_year"`
 	PasswordHash string             `json:"password_hash"`
 	IsActive     bool               `json:"is_active"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
@@ -64,6 +75,10 @@ func (q *Queries) CreateEmployer(ctx context.Context, arg CreateEmployerParams) 
 		arg.Sector,
 		arg.Location,
 		arg.Description,
+		arg.WebsiteUrl,
+		arg.LinkedinUrl,
+		arg.CompanySize,
+		arg.FoundedYear,
 		arg.PasswordHash,
 	)
 	var i CreateEmployerRow
@@ -75,6 +90,10 @@ func (q *Queries) CreateEmployer(ctx context.Context, arg CreateEmployerParams) 
 		&i.Sector,
 		&i.Location,
 		&i.Description,
+		&i.WebsiteUrl,
+		&i.LinkedinUrl,
+		&i.CompanySize,
+		&i.FoundedYear,
 		&i.PasswordHash,
 		&i.IsActive,
 		&i.CreatedAt,
@@ -179,7 +198,9 @@ func (q *Queries) DeleteJobListing(ctx context.Context, arg DeleteJobListingPara
 }
 
 const getEmployerByEmail = `-- name: GetEmployerByEmail :one
-SELECT id, email, company_name, contact_name, sector, location, description, password_hash, is_active, created_at, updated_at
+SELECT id, email, company_name, contact_name, sector, location, description,
+       website_url, linkedin_url, company_size, founded_year,
+       password_hash, is_active, created_at, updated_at
 FROM employers
 WHERE email = $1
 `
@@ -192,6 +213,10 @@ type GetEmployerByEmailRow struct {
 	Sector       string             `json:"sector"`
 	Location     string             `json:"location"`
 	Description  string             `json:"description"`
+	WebsiteUrl   string             `json:"website_url"`
+	LinkedinUrl  string             `json:"linkedin_url"`
+	CompanySize  string             `json:"company_size"`
+	FoundedYear  int32              `json:"founded_year"`
 	PasswordHash string             `json:"password_hash"`
 	IsActive     bool               `json:"is_active"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
@@ -209,6 +234,10 @@ func (q *Queries) GetEmployerByEmail(ctx context.Context, email string) (GetEmpl
 		&i.Sector,
 		&i.Location,
 		&i.Description,
+		&i.WebsiteUrl,
+		&i.LinkedinUrl,
+		&i.CompanySize,
+		&i.FoundedYear,
 		&i.PasswordHash,
 		&i.IsActive,
 		&i.CreatedAt,
@@ -218,7 +247,9 @@ func (q *Queries) GetEmployerByEmail(ctx context.Context, email string) (GetEmpl
 }
 
 const getEmployerByID = `-- name: GetEmployerByID :one
-SELECT id, email, company_name, contact_name, sector, location, description, password_hash, is_active, created_at, updated_at
+SELECT id, email, company_name, contact_name, sector, location, description,
+       website_url, linkedin_url, company_size, founded_year,
+       password_hash, is_active, created_at, updated_at
 FROM employers
 WHERE id = $1
 `
@@ -231,6 +262,10 @@ type GetEmployerByIDRow struct {
 	Sector       string             `json:"sector"`
 	Location     string             `json:"location"`
 	Description  string             `json:"description"`
+	WebsiteUrl   string             `json:"website_url"`
+	LinkedinUrl  string             `json:"linkedin_url"`
+	CompanySize  string             `json:"company_size"`
+	FoundedYear  int32              `json:"founded_year"`
 	PasswordHash string             `json:"password_hash"`
 	IsActive     bool               `json:"is_active"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
@@ -248,6 +283,10 @@ func (q *Queries) GetEmployerByID(ctx context.Context, id int32) (GetEmployerByI
 		&i.Sector,
 		&i.Location,
 		&i.Description,
+		&i.WebsiteUrl,
+		&i.LinkedinUrl,
+		&i.CompanySize,
+		&i.FoundedYear,
 		&i.PasswordHash,
 		&i.IsActive,
 		&i.CreatedAt,
@@ -342,6 +381,121 @@ func (q *Queries) GetEmployerJobListing(ctx context.Context, arg GetEmployerJobL
 		&i.Sector,
 	)
 	return i, err
+}
+
+const getPublicEmployerByID = `-- name: GetPublicEmployerByID :one
+SELECT id, company_name, sector, location, description,
+       website_url, linkedin_url, company_size, founded_year,
+       is_active, created_at
+FROM employers
+WHERE id = $1
+`
+
+type GetPublicEmployerByIDRow struct {
+	ID          int32              `json:"id"`
+	CompanyName string             `json:"company_name"`
+	Sector      string             `json:"sector"`
+	Location    string             `json:"location"`
+	Description string             `json:"description"`
+	WebsiteUrl  string             `json:"website_url"`
+	LinkedinUrl string             `json:"linkedin_url"`
+	CompanySize string             `json:"company_size"`
+	FoundedYear int32              `json:"founded_year"`
+	IsActive    bool               `json:"is_active"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+}
+
+// Veteran-facing employer profile. Excludes password_hash and contact email
+// so we don't leak credentials or the recruiter's inbox to candidates; the
+// fields returned are the ones we're comfortable showing on /companies/:id.
+func (q *Queries) GetPublicEmployerByID(ctx context.Context, id int32) (GetPublicEmployerByIDRow, error) {
+	row := q.db.QueryRow(ctx, getPublicEmployerByID, id)
+	var i GetPublicEmployerByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.CompanyName,
+		&i.Sector,
+		&i.Location,
+		&i.Description,
+		&i.WebsiteUrl,
+		&i.LinkedinUrl,
+		&i.CompanySize,
+		&i.FoundedYear,
+		&i.IsActive,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const listActiveJobListingsForEmployer = `-- name: ListActiveJobListingsForEmployer :many
+SELECT
+    jl.id, jl.title, jl.description, jl.requirements, jl.location,
+    jl.salary_min, jl.salary_max, jl.employment_type, jl.wotc_eligible,
+    jl.posted_at, jl.tasks, jl.benefits, jl.mos_codes_preferred,
+    cr.onet_code, cr.title AS role_title, cr.sector
+FROM job_listings jl
+JOIN civilian_roles cr ON cr.id = jl.civilian_role_id
+WHERE jl.employer_id = $1 AND jl.is_active = true
+ORDER BY jl.posted_at DESC
+`
+
+type ListActiveJobListingsForEmployerRow struct {
+	ID                int32              `json:"id"`
+	Title             string             `json:"title"`
+	Description       string             `json:"description"`
+	Requirements      []string           `json:"requirements"`
+	Location          string             `json:"location"`
+	SalaryMin         int32              `json:"salary_min"`
+	SalaryMax         int32              `json:"salary_max"`
+	EmploymentType    string             `json:"employment_type"`
+	WotcEligible      bool               `json:"wotc_eligible"`
+	PostedAt          pgtype.Timestamptz `json:"posted_at"`
+	Tasks             []string           `json:"tasks"`
+	Benefits          []string           `json:"benefits"`
+	MosCodesPreferred []string           `json:"mos_codes_preferred"`
+	OnetCode          string             `json:"onet_code"`
+	RoleTitle         string             `json:"role_title"`
+	Sector            string             `json:"sector"`
+}
+
+// Veteran-facing list of a single employer's currently-open roles, used on
+// the public company profile page. Mirrors ListEmployerJobListings but
+// filters to active listings only and skips employer-only columns.
+func (q *Queries) ListActiveJobListingsForEmployer(ctx context.Context, employerID pgtype.Int4) ([]ListActiveJobListingsForEmployerRow, error) {
+	rows, err := q.db.Query(ctx, listActiveJobListingsForEmployer, employerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListActiveJobListingsForEmployerRow
+	for rows.Next() {
+		var i ListActiveJobListingsForEmployerRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.Description,
+			&i.Requirements,
+			&i.Location,
+			&i.SalaryMin,
+			&i.SalaryMax,
+			&i.EmploymentType,
+			&i.WotcEligible,
+			&i.PostedAt,
+			&i.Tasks,
+			&i.Benefits,
+			&i.MosCodesPreferred,
+			&i.OnetCode,
+			&i.RoleTitle,
+			&i.Sector,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listCandidatesForEmployer = `-- name: ListCandidatesForEmployer :many
@@ -720,9 +874,15 @@ UPDATE employers SET
     sector = $4,
     location = $5,
     description = $6,
+    website_url  = $7,
+    linkedin_url = $8,
+    company_size = $9,
+    founded_year = $10,
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, email, company_name, contact_name, sector, location, description, password_hash, is_active, created_at, updated_at
+RETURNING id, email, company_name, contact_name, sector, location, description,
+          website_url, linkedin_url, company_size, founded_year,
+          password_hash, is_active, created_at, updated_at
 `
 
 type UpdateEmployerProfileParams struct {
@@ -732,6 +892,10 @@ type UpdateEmployerProfileParams struct {
 	Sector      string `json:"sector"`
 	Location    string `json:"location"`
 	Description string `json:"description"`
+	WebsiteUrl  string `json:"website_url"`
+	LinkedinUrl string `json:"linkedin_url"`
+	CompanySize string `json:"company_size"`
+	FoundedYear int32  `json:"founded_year"`
 }
 
 type UpdateEmployerProfileRow struct {
@@ -742,6 +906,10 @@ type UpdateEmployerProfileRow struct {
 	Sector       string             `json:"sector"`
 	Location     string             `json:"location"`
 	Description  string             `json:"description"`
+	WebsiteUrl   string             `json:"website_url"`
+	LinkedinUrl  string             `json:"linkedin_url"`
+	CompanySize  string             `json:"company_size"`
+	FoundedYear  int32              `json:"founded_year"`
 	PasswordHash string             `json:"password_hash"`
 	IsActive     bool               `json:"is_active"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
@@ -756,6 +924,10 @@ func (q *Queries) UpdateEmployerProfile(ctx context.Context, arg UpdateEmployerP
 		arg.Sector,
 		arg.Location,
 		arg.Description,
+		arg.WebsiteUrl,
+		arg.LinkedinUrl,
+		arg.CompanySize,
+		arg.FoundedYear,
 	)
 	var i UpdateEmployerProfileRow
 	err := row.Scan(
@@ -766,6 +938,10 @@ func (q *Queries) UpdateEmployerProfile(ctx context.Context, arg UpdateEmployerP
 		&i.Sector,
 		&i.Location,
 		&i.Description,
+		&i.WebsiteUrl,
+		&i.LinkedinUrl,
+		&i.CompanySize,
+		&i.FoundedYear,
 		&i.PasswordHash,
 		&i.IsActive,
 		&i.CreatedAt,

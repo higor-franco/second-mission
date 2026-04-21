@@ -1,18 +1,35 @@
 -- name: GetEmployerByEmail :one
-SELECT id, email, company_name, contact_name, sector, location, description, password_hash, is_active, created_at, updated_at
+SELECT id, email, company_name, contact_name, sector, location, description,
+       website_url, linkedin_url, company_size, founded_year,
+       password_hash, is_active, created_at, updated_at
 FROM employers
 WHERE email = $1;
 
 -- name: GetEmployerByID :one
-SELECT id, email, company_name, contact_name, sector, location, description, password_hash, is_active, created_at, updated_at
+SELECT id, email, company_name, contact_name, sector, location, description,
+       website_url, linkedin_url, company_size, founded_year,
+       password_hash, is_active, created_at, updated_at
+FROM employers
+WHERE id = $1;
+
+-- name: GetPublicEmployerByID :one
+-- Veteran-facing employer profile. Excludes password_hash and contact email
+-- so we don't leak credentials or the recruiter's inbox to candidates; the
+-- fields returned are the ones we're comfortable showing on /companies/:id.
+SELECT id, company_name, sector, location, description,
+       website_url, linkedin_url, company_size, founded_year,
+       is_active, created_at
 FROM employers
 WHERE id = $1;
 
 -- name: CreateEmployer :one
-INSERT INTO employers (email, company_name, contact_name, sector, location, description, password_hash)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
+INSERT INTO employers (email, company_name, contact_name, sector, location, description,
+                       website_url, linkedin_url, company_size, founded_year, password_hash)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 ON CONFLICT (email) DO NOTHING
-RETURNING id, email, company_name, contact_name, sector, location, description, password_hash, is_active, created_at, updated_at;
+RETURNING id, email, company_name, contact_name, sector, location, description,
+          website_url, linkedin_url, company_size, founded_year,
+          password_hash, is_active, created_at, updated_at;
 
 -- name: UpdateEmployerProfile :one
 UPDATE employers SET
@@ -21,9 +38,29 @@ UPDATE employers SET
     sector = $4,
     location = $5,
     description = $6,
+    website_url  = $7,
+    linkedin_url = $8,
+    company_size = $9,
+    founded_year = $10,
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, email, company_name, contact_name, sector, location, description, password_hash, is_active, created_at, updated_at;
+RETURNING id, email, company_name, contact_name, sector, location, description,
+          website_url, linkedin_url, company_size, founded_year,
+          password_hash, is_active, created_at, updated_at;
+
+-- name: ListActiveJobListingsForEmployer :many
+-- Veteran-facing list of a single employer's currently-open roles, used on
+-- the public company profile page. Mirrors ListEmployerJobListings but
+-- filters to active listings only and skips employer-only columns.
+SELECT
+    jl.id, jl.title, jl.description, jl.requirements, jl.location,
+    jl.salary_min, jl.salary_max, jl.employment_type, jl.wotc_eligible,
+    jl.posted_at, jl.tasks, jl.benefits, jl.mos_codes_preferred,
+    cr.onet_code, cr.title AS role_title, cr.sector
+FROM job_listings jl
+JOIN civilian_roles cr ON cr.id = jl.civilian_role_id
+WHERE jl.employer_id = $1 AND jl.is_active = true
+ORDER BY jl.posted_at DESC;
 
 -- name: ListEmployerJobListings :many
 SELECT

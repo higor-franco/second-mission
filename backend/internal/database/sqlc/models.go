@@ -50,6 +50,10 @@ type Employer struct {
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 	PasswordHash string             `json:"password_hash"`
 	IsActive     bool               `json:"is_active"`
+	WebsiteUrl   string             `json:"website_url"`
+	LinkedinUrl  string             `json:"linkedin_url"`
+	CompanySize  string             `json:"company_size"`
+	FoundedYear  int32              `json:"founded_year"`
 }
 
 type JobListing struct {

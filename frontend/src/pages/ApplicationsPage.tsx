@@ -29,6 +29,10 @@ interface Application {
   wotc_eligible: boolean
   sector: string
   role_title: string
+  // Matches OpportunitiesPage — see its comment. Optional on the wire
+  // for safety with older backends, but the rendering logic treats 0 /
+  // missing the same way (plain text, no link).
+  employer_id?: number
   company_name: string
 }
 
@@ -303,7 +307,16 @@ export default function ApplicationsPage() {
                             {app.title}
                           </h3>
                           <p className="text-sm text-[var(--muted-foreground)] mt-0.5">
-                            <span className="font-semibold text-[var(--navy-light)]">{app.company_name}</span>
+                            {app.employer_id ? (
+                              <Link
+                                to={`/companies/${app.employer_id}`}
+                                className="font-semibold text-[var(--navy-light)] hover:text-[var(--gold-dark)] transition-colors no-underline cursor-pointer"
+                              >
+                                {app.company_name} →
+                              </Link>
+                            ) : (
+                              <span className="font-semibold text-[var(--navy-light)]">{app.company_name}</span>
+                            )}
                             {' · '}
                             {app.location}
                             {' · '}

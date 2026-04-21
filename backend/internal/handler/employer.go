@@ -38,6 +38,26 @@ type employerMeResponse struct {
 	Sector      string `json:"sector"`
 	Location    string `json:"location"`
 	Description string `json:"description"`
+	WebsiteURL  string `json:"website_url"`
+	LinkedinURL string `json:"linkedin_url"`
+	CompanySize string `json:"company_size"`
+	FoundedYear int32  `json:"founded_year"`
+	IsActive    bool   `json:"is_active"`
+}
+
+// publicEmployerResponse is the veteran-facing view of an employer. Omits
+// password hash, account email, and updated_at — veterans only need what
+// helps them decide whether to apply.
+type publicEmployerResponse struct {
+	ID          int32  `json:"id"`
+	CompanyName string `json:"company_name"`
+	Sector      string `json:"sector"`
+	Location    string `json:"location"`
+	Description string `json:"description"`
+	WebsiteURL  string `json:"website_url"`
+	LinkedinURL string `json:"linkedin_url"`
+	CompanySize string `json:"company_size"`
+	FoundedYear int32  `json:"founded_year"`
 	IsActive    bool   `json:"is_active"`
 }
 
@@ -89,6 +109,10 @@ type registerEmployerRequest struct {
 	Sector      string `json:"sector"`
 	Location    string `json:"location"`
 	Description string `json:"description"`
+	WebsiteURL  string `json:"website_url"`
+	LinkedinURL string `json:"linkedin_url"`
+	CompanySize string `json:"company_size"`
+	FoundedYear int32  `json:"founded_year"`
 }
 
 // POST /api/employer/register
@@ -135,6 +159,10 @@ func (h *EmployerHandler) Register(w http.ResponseWriter, r *http.Request) {
 		Sector:       req.Sector,
 		Location:     req.Location,
 		Description:  req.Description,
+		WebsiteUrl:   strings.TrimSpace(req.WebsiteURL),
+		LinkedinUrl:  strings.TrimSpace(req.LinkedinURL),
+		CompanySize:  strings.TrimSpace(req.CompanySize),
+		FoundedYear:  clampFoundedYear(req.FoundedYear),
 		PasswordHash: string(hash),
 	})
 	if err != nil {
@@ -159,7 +187,7 @@ func (h *EmployerHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 	writeJSON(w, http.StatusCreated, map[string]any{
 		"message":  "registration successful",
-		"employer": toEmployerMeResponse(employer.ID, employer.Email, employer.CompanyName, employer.ContactName, employer.Sector, employer.Location, employer.Description, employer.IsActive),
+		"employer": toEmployerMeResponseFromCreate(employer),
 	})
 }
 
@@ -207,7 +235,7 @@ func (h *EmployerHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	writeJSON(w, http.StatusOK, map[string]any{
 		"message":  "logged in",
-		"employer": toEmployerMeResponse(employer.ID, employer.Email, employer.CompanyName, employer.ContactName, employer.Sector, employer.Location, employer.Description, employer.IsActive),
+		"employer": toEmployerMeResponseFromGetByEmail(employer),
 	})
 }
 
@@ -252,9 +280,18 @@ func (h *EmployerHandler) DevLogin(w http.ResponseWriter, r *http.Request) {
 			}
 		} else {
 			employer = sqlc.GetEmployerByEmailRow{
-				ID: created.ID, Email: created.Email, CompanyName: created.CompanyName,
-				ContactName: created.ContactName, Sector: created.Sector, Location: created.Location,
-				Description: created.Description, IsActive: created.IsActive,
+				ID:          created.ID,
+				Email:       created.Email,
+				CompanyName: created.CompanyName,
+				ContactName: created.ContactName,
+				Sector:      created.Sector,
+				Location:    created.Location,
+				Description: created.Description,
+				WebsiteUrl:  created.WebsiteUrl,
+				LinkedinUrl: created.LinkedinUrl,
+				CompanySize: created.CompanySize,
+				FoundedYear: created.FoundedYear,
+				IsActive:    created.IsActive,
 			}
 		}
 	}
@@ -268,7 +305,7 @@ func (h *EmployerHandler) DevLogin(w http.ResponseWriter, r *http.Request) {
 
 	writeJSON(w, http.StatusOK, map[string]any{
 		"message":  "logged in",
-		"employer": toEmployerMeResponse(employer.ID, employer.Email, employer.CompanyName, employer.ContactName, employer.Sector, employer.Location, employer.Description, employer.IsActive),
+		"employer": toEmployerMeResponseFromGetByEmail(employer),
 	})
 }
 
@@ -465,7 +502,7 @@ func (h *EmployerHandler) Me(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, toEmployerMeResponse(employer.ID, employer.Email, employer.CompanyName, employer.ContactName, employer.Sector, employer.Location, employer.Description, employer.IsActive))
+	writeJSON(w, http.StatusOK, toEmployerMeResponseFromGetByID(employer))
 }
 
 type updateEmployerProfileRequest struct {
@@ -474,6 +511,10 @@ type updateEmployerProfileRequest struct {
 	Sector      string `json:"sector"`
 	Location    string `json:"location"`
 	Description string `json:"description"`
+	WebsiteURL  string `json:"website_url"`
+	LinkedinURL string `json:"linkedin_url"`
+	CompanySize string `json:"company_size"`
+	FoundedYear int32  `json:"founded_year"`
 }
 
 // PUT /api/employer/profile
@@ -502,6 +543,10 @@ func (h *EmployerHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) 
 		Sector:      req.Sector,
 		Location:    req.Location,
 		Description: req.Description,
+		WebsiteUrl:  strings.TrimSpace(req.WebsiteURL),
+		LinkedinUrl: strings.TrimSpace(req.LinkedinURL),
+		CompanySize: strings.TrimSpace(req.CompanySize),
+		FoundedYear: clampFoundedYear(req.FoundedYear),
 	})
 	if err != nil {
 		slog.Error("failed to update employer profile", "id", session.UserID, "err", err)
@@ -509,7 +554,115 @@ func (h *EmployerHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	writeJSON(w, http.StatusOK, toEmployerMeResponse(employer.ID, employer.Email, employer.CompanyName, employer.ContactName, employer.Sector, employer.Location, employer.Description, employer.IsActive))
+	writeJSON(w, http.StatusOK, toEmployerMeResponseFromUpdate(employer))
+}
+
+// --- Public company profile (veteran-facing) ---
+
+// publicCompanyJobListing is the trimmed listing shape the company profile
+// page renders. We reuse existing pieces where possible (role_title, sector,
+// salary bands) but drop employer-only fields like expires_at / is_active
+// because the query already filters to active roles.
+type publicCompanyJobListing struct {
+	ID                int32    `json:"id"`
+	Title             string   `json:"title"`
+	Description       string   `json:"description"`
+	Requirements      []string `json:"requirements"`
+	Location          string   `json:"location"`
+	SalaryMin         int32    `json:"salary_min"`
+	SalaryMax         int32    `json:"salary_max"`
+	EmploymentType    string   `json:"employment_type"`
+	WotcEligible      bool     `json:"wotc_eligible"`
+	PostedAt          string   `json:"posted_at"`
+	Tasks             []string `json:"tasks"`
+	Benefits          []string `json:"benefits"`
+	MosCodesPreferred []string `json:"mos_codes_preferred"`
+	OnetCode          string   `json:"onet_code"`
+	RoleTitle         string   `json:"role_title"`
+	Sector            string   `json:"sector"`
+}
+
+// GET /api/veteran/employers/{id}
+// Returns the public company profile plus the employer's active roles.
+// Session-gated: only signed-in veterans can browse employer profiles.
+// This is the destination when a veteran clicks a company name on the
+// Opportunities or My Pipeline pages.
+func (h *EmployerHandler) PublicCompanyProfile(w http.ResponseWriter, r *http.Request) {
+	session, ok := GetSession(r)
+	if !ok || session.UserType != "veteran" {
+		// Deliberately veteran-only. Employers viewing another company's
+		// profile is out of scope for v1 — the feature ships to close the
+		// information gap the candidate side has.
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "sign in as a veteran to view company profiles"})
+		return
+	}
+
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 32)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid employer id"})
+		return
+	}
+
+	row, err := h.queries.GetPublicEmployerByID(r.Context(), int32(id))
+	if err != nil {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "company not found"})
+		return
+	}
+
+	// Don't expose deactivated companies to veterans. This is a soft
+	// delete-ish mechanism — an admin could flip is_active to hide a
+	// company while preserving the row. 404 keeps the surface consistent
+	// with a non-existent id.
+	if !row.IsActive {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "company not found"})
+		return
+	}
+
+	employerID := pgtype.Int4{Int32: int32(id), Valid: true}
+	listingRows, err := h.queries.ListActiveJobListingsForEmployer(r.Context(), employerID)
+	if err != nil {
+		slog.Error("failed to list active listings for public company profile", "employer_id", id, "err", err)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "internal server error"})
+		return
+	}
+
+	listings := make([]publicCompanyJobListing, len(listingRows))
+	for i, row := range listingRows {
+		listings[i] = publicCompanyJobListing{
+			ID:                row.ID,
+			Title:             row.Title,
+			Description:       row.Description,
+			Requirements:      nullableSlice(row.Requirements),
+			Location:          row.Location,
+			SalaryMin:         row.SalaryMin,
+			SalaryMax:         row.SalaryMax,
+			EmploymentType:    row.EmploymentType,
+			WotcEligible:      row.WotcEligible,
+			PostedAt:          formatTimestamptz(row.PostedAt),
+			Tasks:             nullableSlice(row.Tasks),
+			Benefits:          nullableSlice(row.Benefits),
+			MosCodesPreferred: nullableSlice(row.MosCodesPreferred),
+			OnetCode:          row.OnetCode,
+			RoleTitle:         row.RoleTitle,
+			Sector:            row.Sector,
+		}
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"employer": publicEmployerResponse{
+			ID:          row.ID,
+			CompanyName: row.CompanyName,
+			Sector:      row.Sector,
+			Location:    row.Location,
+			Description: row.Description,
+			WebsiteURL:  row.WebsiteUrl,
+			LinkedinURL: row.LinkedinUrl,
+			CompanySize: row.CompanySize,
+			FoundedYear: row.FoundedYear,
+			IsActive:    row.IsActive,
+		},
+		"listings": listings,
+	})
 }
 
 // --- Dashboard ---
@@ -1114,17 +1267,86 @@ func (h *EmployerHandler) createEmployerSession(r *http.Request, w http.Response
 	return sessionID, nil
 }
 
-func toEmployerMeResponse(id int32, email, companyName, contactName, sector, location, description string, isActive bool) employerMeResponse {
+// toEmployerMeResponseFromGetByEmail builds the employer "me" payload from
+// the row returned by GetEmployerByEmail. Kept per-row-type because sqlc
+// emits distinct Go structs for each SELECT; a single generic helper would
+// force an interface or reflection, which is worse than four tiny adapters.
+func toEmployerMeResponseFromGetByEmail(e sqlc.GetEmployerByEmailRow) employerMeResponse {
 	return employerMeResponse{
-		ID:          id,
-		Email:       email,
-		CompanyName: companyName,
-		ContactName: contactName,
-		Sector:      sector,
-		Location:    location,
-		Description: description,
-		IsActive:    isActive,
+		ID:          e.ID,
+		Email:       e.Email,
+		CompanyName: e.CompanyName,
+		ContactName: e.ContactName,
+		Sector:      e.Sector,
+		Location:    e.Location,
+		Description: e.Description,
+		WebsiteURL:  e.WebsiteUrl,
+		LinkedinURL: e.LinkedinUrl,
+		CompanySize: e.CompanySize,
+		FoundedYear: e.FoundedYear,
+		IsActive:    e.IsActive,
 	}
+}
+
+func toEmployerMeResponseFromGetByID(e sqlc.GetEmployerByIDRow) employerMeResponse {
+	return employerMeResponse{
+		ID:          e.ID,
+		Email:       e.Email,
+		CompanyName: e.CompanyName,
+		ContactName: e.ContactName,
+		Sector:      e.Sector,
+		Location:    e.Location,
+		Description: e.Description,
+		WebsiteURL:  e.WebsiteUrl,
+		LinkedinURL: e.LinkedinUrl,
+		CompanySize: e.CompanySize,
+		FoundedYear: e.FoundedYear,
+		IsActive:    e.IsActive,
+	}
+}
+
+func toEmployerMeResponseFromCreate(e sqlc.CreateEmployerRow) employerMeResponse {
+	return employerMeResponse{
+		ID:          e.ID,
+		Email:       e.Email,
+		CompanyName: e.CompanyName,
+		ContactName: e.ContactName,
+		Sector:      e.Sector,
+		Location:    e.Location,
+		Description: e.Description,
+		WebsiteURL:  e.WebsiteUrl,
+		LinkedinURL: e.LinkedinUrl,
+		CompanySize: e.CompanySize,
+		FoundedYear: e.FoundedYear,
+		IsActive:    e.IsActive,
+	}
+}
+
+func toEmployerMeResponseFromUpdate(e sqlc.UpdateEmployerProfileRow) employerMeResponse {
+	return employerMeResponse{
+		ID:          e.ID,
+		Email:       e.Email,
+		CompanyName: e.CompanyName,
+		ContactName: e.ContactName,
+		Sector:      e.Sector,
+		Location:    e.Location,
+		Description: e.Description,
+		WebsiteURL:  e.WebsiteUrl,
+		LinkedinURL: e.LinkedinUrl,
+		CompanySize: e.CompanySize,
+		FoundedYear: e.FoundedYear,
+		IsActive:    e.IsActive,
+	}
+}
+
+// clampFoundedYear rejects obvious junk so we don't store "-3" or "99999".
+// 0 stays 0 (meaning "unknown"); anything outside a plausible founding-year
+// range resolves back to 0 so the UI can hide it.
+func clampFoundedYear(y int32) int32 {
+	if y < 1600 || y > 2100 {
+		return 0
+	}
+	return y
 }
 
 func nullableSlice(s []string) []string {

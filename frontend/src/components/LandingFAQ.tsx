@@ -18,13 +18,36 @@ interface FAQ {
 // side → employer side → mission).
 const FAQS: FAQ[] = [
   {
+    // Lead with the beta note — it's the most load-bearing expectation to
+    // set for both sides of the marketplace before anything else gets read.
+    audience: 'PLATFORM',
+    question: 'Is Second Mission production-ready, or is this a beta?',
+    answer: (
+      <>
+        We're in an <strong>open beta / proof-of-concept</strong> phase
+        while we validate the platform end-to-end with our Fort Cavazos
+        beachhead cohort and anchor Texas employers. Everything you see
+        works — veterans can complete the full journey, employers can
+        post listings and advance candidates through the hiring funnel —
+        but we're still tuning the product with real users.{' '}
+        <strong>
+          During this testing period the platform is free for everyone
+          — veterans <em>and</em> employers
+        </strong>
+        . Pricing for employers (subscription + per-hire placement fee)
+        kicks in only after we exit beta, and we'll notify every
+        registered account well in advance. Veterans are free, always.
+      </>
+    ),
+  },
+  {
     audience: 'VETERAN',
     question: 'Is Second Mission really free for veterans?',
     answer: (
       <>
         Yes — and it always will be. Veterans never pay a cent. The
-        platform is funded by employer subscriptions and per-hire
-        placement fees. We also help those employers claim the{' '}
+        platform is funded (post-beta) by employer subscriptions and
+        per-hire placement fees. We also help those employers claim the{' '}
         <strong>Work Opportunity Tax Credit (WOTC)</strong>, which
         offsets their hiring costs by <strong>$2,400–$9,600</strong>{' '}
         per veteran hired.
@@ -91,12 +114,16 @@ const FAQS: FAQ[] = [
     question: 'How does pricing work for employers?',
     answer: (
       <>
-        Two components: a <strong>monthly subscription</strong> for
-        pipeline access (browse matched candidates, see match scores,
-        reach out) and a <strong>per-hire placement fee</strong> when
-        a veteran you sourced through us accepts an offer. The per-hire
-        fee is structured to be offset by the WOTC tax credit — most
-        employers are net positive from the first placement.
+        <strong>Free during the current beta.</strong> Post listings,
+        browse candidates, move hires through the funnel — no card, no
+        subscription. When we exit beta, pricing will have two
+        components: a <strong>monthly subscription</strong> for pipeline
+        access (browse matched candidates, see match scores, reach out)
+        and a <strong>per-hire placement fee</strong> when a veteran you
+        sourced through us accepts an offer. The per-hire fee is
+        structured to be offset by the WOTC tax credit — most employers
+        are net positive from the first placement. Beta participants
+        will get ample notice and early-adopter terms.
       </>
     ),
   },

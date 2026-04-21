@@ -3,6 +3,11 @@ import { useState } from 'react'
 // Shape the backend returns at POST /api/employer/linkedin/extract.
 // The frontend consumes `profile` into form fields; `source` drives the
 // "Imported from LinkedIn URL" / "Imported from pasted text" banner.
+//
+// website_url / company_size / founded_year are optional — older server
+// builds and low-signal extractions leave them off. Keeping them optional
+// means the form gracefully falls back to blank when the AI can't read
+// them rather than trampling existing values with empty strings.
 export interface LinkedInProfile {
   company_name: string
   sector: string
@@ -10,6 +15,9 @@ export interface LinkedInProfile {
   description: string
   tagline: string
   industry_raw: string
+  website_url?: string
+  company_size?: string
+  founded_year?: number
 }
 
 interface ExtractResponse {

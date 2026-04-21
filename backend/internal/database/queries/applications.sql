@@ -1,11 +1,13 @@
 -- name: GetVeteranApplications :many
--- Returns all applications for a veteran with job listing and employer details
+-- Returns all applications for a veteran with job listing and employer details.
+-- Exposes the employer id so the applications list can link directly to the
+-- public company profile at /companies/:id.
 SELECT
     va.id, va.status, va.match_score, va.match_details, va.notes, va.created_at, va.updated_at,
     jl.id AS job_listing_id, jl.title, jl.description, jl.location,
     jl.salary_min, jl.salary_max, jl.employment_type, jl.wotc_eligible,
     cr.sector, cr.title AS role_title,
-    e.company_name
+    e.id AS employer_id, e.company_name
 FROM veteran_applications va
 JOIN job_listings jl ON jl.id = va.job_listing_id
 JOIN civilian_roles cr ON cr.id = jl.civilian_role_id
