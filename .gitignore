@@ -8,3 +8,10 @@ e2e/node_modules/
 .venv/
 .env
 .claude/launch.json
+
+# DD-214s and other service-history documents are processed in memory
+# only (see tech-stack and ADR 007). Nothing of this shape ever belongs
+# in the repo — belt-and-suspenders against accidental `git add -A`.
+*.pdf
+DD214_*
+dd214_*
